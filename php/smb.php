@@ -5,12 +5,27 @@
 #
 class Smb {
 
+var $login;
+
+var $password;
+
 var $info = array (
   'workgroup' => '',
   'server' => '',
   'share' => '',
   'path' => ''
 );
+
+# --------------------------------------------------------------------
+# Method: SetUser
+# Description: Set user and password
+#
+function SetUser ($login, $password) {
+  $this->login = $login;
+  $this->password = $password;
+  # from PHP Samba Explorer (better security)
+  putenv('USER='.$login.'%'.$password);
+}
 
 # --------------------------------------------------------------------
 # Method: GetTarget

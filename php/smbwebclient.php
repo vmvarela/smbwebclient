@@ -168,8 +168,8 @@ function GetUser() {
     else
       $auth = '';
     if (is_array($auth)) {
-      $this->login = $auth['login']; 
-      $this->password = $auth['password'];
+      $login = $auth['login']; 
+      $password = $auth['password'];
       break;
     }
   }
@@ -181,10 +181,10 @@ function GetUser() {
       'login' => $_POST['login'],
       'password' => $_POST['password']
     );
-    $this->login = $_POST['login'];
-    $this->password = $_POST['password'];
+    $login = $_POST['login'];
+    $password = $_POST['password'];
 
-  } elseif (isset($_GET['auth']) OR (! isset($this->login)) OR $this->login == '' OR $this->password == '') {
+  } elseif (isset($_GET['auth']) OR (! isset($login)) OR $login == '' OR $password == '') {
 
     # authentication is needed (form)
     print $this->Page ('', $this->LoadTemplate('style/template-auth.html', array (
@@ -200,8 +200,7 @@ function GetUser() {
     exit;
   }
 
-  # from PHP Samba Explorer (better security)
-  putenv('USER='.$this->login.'%'.$this->password);
+  $this->SetUser($login, $password);
 }
 
 # --------------------------------------------------------------------
@@ -322,6 +321,7 @@ function ListView () {
   $html .= "<td class=\"lang\">".strtoupper($_SESSION['Language'])."</td>";
   $html .= "<td class=\"logout\">".$this->Link($this->Image($this->GetUrl('path','style/logout.jpg'),$this->_('Logout')),
       $this->GetUrl('auth',1))."</td>";
+  $html .= "<td class=\"time\">".date('h:i')."</td>";
   $html .= "</tr></table></th>";
   $html .= "</tr>\n";
 
