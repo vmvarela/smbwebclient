@@ -1,0 +1,18 @@
+<div id="alert">
+<form action="{action}" method="post">
+<table>
+  <caption>{save_as}</caption>
+  <tr>
+    <td>
+      <input type="hidden" name="method" value="ListViewAction" />
+      <input type="hidden" name="file" value="{hidden_file}" />
+      <input type="hidden" name="name" value="{hidden_name}" />
+      <input type="hidden" name="path" value="{hidden_path}" />
+      <p>{overwrite_question}</p>
+      <input class="button" type="submit" name="do" value="{yes}" />
+      <input class="button" type="submit" name="do" value="{no}" />
+    </td>
+  </tr>
+</table>
+</form>
+</div>
