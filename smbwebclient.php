@@ -2,8 +2,7 @@
 # -----------------------------------------------------------------
 # File:    smbwebclient.php
 # Author:  victor m. varela, vmvarela@nivel0.net
-#
-# $Id: smbwebclient.php,v 1.2 2004/07/07 08:58:39 victorvarela Exp $
+# Version: $Name:  $
 #
 # Description:
 #   This script is a web interface to Windows Networks.
@@ -1305,7 +1304,8 @@ function _SmbClient ($command='', $path='', $message='')
       case 'SMB_AUTH_ARG': $smbcmd .= ' -U '.escapeshellarg($this->user.'%'.$this->pw);
     }
   }
-  $cmdline = $this->cfgSmbClient.$options.' -N '.$smbcmd." 2>&1";
+  $cmdline = $this->cfgSmbClient.' '.$smbcmd.' '.$options.' -N 2>&1';
+
   if ($message <> '') $cmdline = "echo ".escapeshellarg($message).' | '.$cmdline;
   return $this->_ParseSmbClient ($cmdline, $command, $path);
 }
@@ -1318,7 +1318,7 @@ function _ParseSmbClient ($cmdline)
     print "Command: {$cmdline}\n\n[smbclient]\n{$output}\n[/smbclient]\n";
     print "</pre>\n";
   }
-  $lineType = '';
+  $lineType = $mode = '';
   foreach (split("\n", $output) as $line) if ($line <> '') {
     $regs = array();
     reset ($this->parser);
