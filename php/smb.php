@@ -1,13 +1,17 @@
 <?php
-### Section 2.1: Smb class
-#
+
+
 # Samba related methods
-#
+
 class Smb {
 
 var $login;
 
 var $password;
+
+var $type;
+
+var $win_path;
 
 var $info = array (
   'workgroup' => '',
@@ -16,27 +20,26 @@ var $info = array (
   'path' => ''
 );
 
-# --------------------------------------------------------------------
-# Method: SetUser
-# Description: Set user and password
-#
+
+# Set user and password
+
 function SetUser ($login, $password) {
   $this->login = $login;
   $this->password = $password;
   # from PHP Samba Explorer (better security)
-  putenv('USER='.$login.'%'.$password);
+  if ($login <> '' AND $password <> '')
+     putenv('USER='.$login.'%'.$password);
 }
 
-# --------------------------------------------------------------------
-# Method: GetTarget
-# Description: Set type and name of requested SAMBA object
-#
+
+# Set type and name of requested SAMBA object
+
 function GetTarget($samba_path) {
   $path = ereg_replace('^/','',cfgSambaRoot.'/'.$samba_path);
   $path = ereg_replace('/$','', $path);
   if ($path == '') {
     $this->type = 'Network';
-    $this->winpath = $this->name = 'Windows Network';
+    $this->win_path = $this->name = 'Windows Network';
   } else {
     $a = split('/',$path);
     for ($i=0, $ap=array(); $i<count($a); $i++) switch ($i) {
@@ -49,22 +52,20 @@ function GetTarget($samba_path) {
     switch (count($a)) {
       case 1:  $this->type = 'Workgroup'; break;
       case 2:  $this->type = 'Server';
-               $this->winpath = '\\\\'.$this->info['server'];
+               $this->win_path = '\\\\'.$this->info['server'];
                break;
       default: $this->type = 'Share';
     }
-    if (! isset($this->winpath)) $this->winpath = str_replace('/','\\',$path);
+    if (! isset($this->win_path)) $this->win_path = str_replace('/','\\',$path);
     $this->name = basename($path);
   }
   $this->info['network'] = 'Windows Network';
-  $this->path = $path;
+  $this->abs_path = $path;
 }
 
 
-# --------------------------------------------------------------------
-# Method: SmbClient
-# Description: Builds a smbclient command
-#
+# Builds a smbclient command
+
 function SmbClient ($cmd, $path = '') {
   if ($path <> '') $path = ' -D '.escapeshellarg($path);
   if ($this->info['workgroup'] <> '') $wg = ' -W '.escapeshellarg($this->info['workgroup']);
@@ -78,10 +79,9 @@ function SmbClient ($cmd, $path = '') {
     ' -b 1200 -N -c '.escapeshellarg($cmd);
 }
 
-# --------------------------------------------------------------------
-# Method: Samba
-# Description: smbclient interface
-#
+
+# smbclient interface
+
 function Samba ($command, $path='') {
   $this->info['error'] = '';
   switch ($command) {
@@ -95,8 +95,8 @@ function Samba ($command, $path='') {
         if ($this->type == 'Workgroup') {
           #  who is the master ? (browse network first)
           $this->type = 'Network';
-          if (isset($_SESSION['SmbWebClient_Auth']['Network']['Windows Network']))
-            $auth = $_SESSION['SmbWebClient_Auth']['Network']['Windows Network'];
+          if (isset($_SESSION['Auth']['Network']['Windows Network']))
+            $auth = $_SESSION['Auth']['Network']['Windows Network'];
           if (isset($this->user)) $oldauth = $this->user.'%'.$this->password;
           else $oldauth = '';
           if (isset($auth['login'])) putenv('USER='.$auth['login'].'%'.$auth['password']);
@@ -133,7 +133,7 @@ function Samba ($command, $path='') {
       $this->time = $this->info['files'][$this->name]['time'];
       $this->cachefile = (cfgCachePath == '')
         ? tempnam('/tmp','swc')
-        : cfgCachePath.'/'.$this->path;
+        : cfgCachePath.'/'.$this->abs_path;
       if (($this->time <> '') AND (cfgCachePath == '' 
         OR (!file_exists($this->cachefile))
         OR filemtime($this->cachefile) < $time)) {
@@ -175,10 +175,9 @@ function Samba ($command, $path='') {
   return $this->ParseSmbClient ($cmd, $command, $path);
 }
 
-# --------------------------------------------------------------------
-# Method: ParseSmbClient
-# Description: Parses a smbclient command output
-#
+
+# Parses a smbclient command output
+
 function ParseSmbClient ($cmd, $command = '', $path = '') {
   $ocmd = `{$cmd}`;
   Debug($ocmd, 3);
@@ -287,10 +286,9 @@ function ParseSmbClient ($cmd, $command = '', $path = '') {
   return $this->info['error'];
 }
 
-# --------------------------------------------------------------------
-# Method: FormatBytes
-# Description: print KB
-#
+
+# Print KB
+
 function FormatBytes ($bytes) {
   if ($bytes < 1024)
     return "1 KB";
@@ -302,10 +300,9 @@ function FormatBytes ($bytes) {
     return number_format($bytes / (1024*1024*1024),0) . " GB";
 }
 
-# --------------------------------------------------------------------
-# Method: ParseTime
-# Description: Returns unix time from smbclient output
-#
+
+# Returns unix time from smbclient output
+
 function ParseTime ($m, $d, $y, $hhiiss) {
   $his= split(':', $hhiiss);
   $im = 1 + strpos("JanFebMarAprMayJunJulAgoSepOctNovDec", $m) / 3;
@@ -313,10 +310,8 @@ function ParseTime ($m, $d, $y, $hhiiss) {
 }
 
 
-# --------------------------------------------------------------------
-# Method: MakeDirectory
-# Description: Makes a directory recursively
-#
+# Makes a directory recursively
+
 function MakeDirectory ($path, $mode = 0777) {
   if (strlen($path) == 0) return 0;
   if (is_dir($path)) return 1;
@@ -325,10 +320,9 @@ function MakeDirectory ($path, $mode = 0777) {
     and mkdir($path, $mode));
 }
 
-# --------------------------------------------------------------------
-# Method: FromPath
-# Description: Builds a new path from current and a relative path
-#
+
+# Builds a new path from current and a relative path
+
 function FromPath ($relative='') {
   $path = $_REQUEST['path'];
   switch ($relative) {
@@ -340,10 +334,9 @@ function FromPath ($relative='') {
   return ($path == '.') ? '' : $path;
 }
 
-# --------------------------------------------------------------------
-# Method: DirName
-# Description: I do not like PHP dirname
-#
+
+# I do not like PHP dirname
+
 function DirName ($path='') {
   $a = split('/', $path);
   $n = (trim($a[count($a)-1]) == '') ? (count($a)-2) : (count($a)-1);

@@ -1,7 +1,7 @@
 <?php
-#
+
 # Supported languages
-#
+
 $languages = array(
   'af' => 'af|afrikaans',
   'ar' => 'ar([-_][[:alpha:]]{2})?|arabic',
@@ -53,10 +53,9 @@ $languages = array(
   'zh' => 'zh|chinese simplified'
 );
 
-# --------------------------------------------------------------------
-# Function: GetString
-# Description: Returns a string in a given language
-#
+
+# Returns a string in a given language
+
 function GetString ($str) {
   global $strings;
 
@@ -72,10 +71,8 @@ function GetString ($str) {
 }
 
 
-# --------------------------------------------------------------------
-# Function: InitLanguage
-# Description: Initializes language environment
-#
+# Initializes language environment
+
 function InitLanguage () {
   global $strings, $languages;
 

@@ -3,7 +3,17 @@
 <head>
   <title>{title}</title>
   <link rel="stylesheet" type="text/css" href="{stylesheet}" />
-{javascript}
+  <script language="JavaScript">
+    function sel_all(master_select) {
+      with (document.d_form) {
+        for (i=0; i<elements.length; i++) {
+          ele = elements[i];
+        if (ele.type=="checkbox")
+            ele.checked = master_select.checked;
+        }
+      }
+    }
+  </script>
 </head>
 <body>
 {content}

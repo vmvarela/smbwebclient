@@ -2,6 +2,7 @@
 
 define ('cfgInlineStyle', 'off');
 define ('cfgLogFile', 'smbwebclient.log');
+define ('cfgAnonymous', 'on');
 
 error_reporting(E_ALL);
 

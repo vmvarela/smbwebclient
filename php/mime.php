@@ -1,7 +1,8 @@
 <?php
-#
+
+
 # MIME types from file name extension
-#
+
 $mime_types = array (
   'ez'=>'application/andrew-inset', 'csm'=>'application/cu-seeme', 'cu'=>'application/cu-seeme', 
   'tsp'=>'application/dsptype', 'spl'=>'application/x-futuresplash', 'cpt'=>'image/x-corelphotopaint', 
@@ -90,10 +91,9 @@ $mime_types = array (
   'movie'=>'video/x-sgi-movie', 'ice'=>'x-conference/x-cooltalk', 'vrm'=>'x-world/x-vrml'
 );
 
-# --------------------------------------------------------------------
-# Function: GetMimeFile
-# Description: Dumps a file with MIME headers
-#
+
+# Dumps a file with MIME headers
+
 function GetMimeFile($file='', $name='', $is_attachment=0) {
   global $mime_types;
 

@@ -1,8 +1,6 @@
 <?php
-### Section 3: Main program
-#
+
 # Creates a new SmbWebClient object and runs it.
-#
 
 set_time_limit(1200);
 clearstatcache();

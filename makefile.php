@@ -53,10 +53,9 @@ $languages = array(
 
 class SmbWebClientBuild {
 
-# --------------------------------------------------------------------
-# Method: ListTranslators
-# Description: List the people that translates SMB Web Client
-#
+
+# List the people that translates SMB Web Client
+
 function ListTranslators() {
   global $languages;
   print "<?php\n#\n";
@@ -81,10 +80,9 @@ function ListTranslators() {
   print "\n?>";
 }
 
-# --------------------------------------------------------------------
-# Method: MakeMimeTypesArray
-# Description: Builds PHP code for $this->mime_types array
-#
+
+# Builds PHP code for $this->mime_types array
+
 function MakeMimeTypesArray ($mt_f) {
   $this->mime_types = array();
   if ($mt_f == '') $mt_f = '/etc/mime.types';
@@ -109,18 +107,16 @@ function MakeMimeTypesArray ($mt_f) {
 }
 
 
-# --------------------------------------------------------------------
-# Method: MakeStyleArray
-# Description: Builds PHP code for $this->style array
-#
+# Builds PHP code for $this->style array
+
 function MakeStyleArray() {
   print "<?php\n";
   $archivos = explode("\n",str_replace(" ", "", `ls style/*.*`));
 ?>
-#
+
 # Theme files
 # Files are included using base64_encode PHP function
-#
+
 <?php
   print "\$style = array (\n";
   foreach ($archivos as $archivo) if ($archivo <> '') {
@@ -135,10 +131,9 @@ function MakeStyleArray() {
   print ");\n\n?>";
 }
 
-# --------------------------------------------------------------------
-# Method: MakeStringsArray
-# Description: Builds PHP code for $this->strings array
-#
+
+# Builds PHP code for $this->strings array
+
 function MakeStringsArray() {
   print "<?php\n";
   $lines = file("http://www.nivel0.net/SmbWebClientTranslationData/export.xml");
@@ -150,10 +145,10 @@ function MakeStringsArray() {
     }
   }
 ?>
-#
+
 # Available <?php print count($translation) ?> languages at
 # http://wwww.nivel0.net/SmbWebClientTranslation
-#
+
 <?php
   $translation['en'] = $original;
   print '$strings = array ('."\n";
@@ -167,10 +162,8 @@ function MakeStringsArray() {
   print ");\n\n?>";
 }
 
-# --------------------------------------------------------------------
-# Method: MakeSmbWebClient
-# Description: Builds SmbWebClient script
-#
+# Builds SmbWebClient script
+
 function MakeSmbWebClient () {
     include 'php/includes.php';
     foreach ($includes as $archivo) if ($archivo <> '') {

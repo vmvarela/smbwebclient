@@ -1,5 +1,5 @@
 <?php
-# --------------------------------------------------------------------
+#
 # File:    smbwebclient.php
 # Author:  Victor M. Varela <vmvarela@nivel0.net>
 # Version: 1.78
@@ -19,4 +19,5 @@
 # Credits:
 #    * CSS by Maria Iglesias
 #    * JavaScript patch by Bram Daams
+#
 ?>

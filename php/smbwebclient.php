@@ -1,15 +1,11 @@
 <?php
-### Section 2.2: SmbWebClient class
-#
+
+
 # Web interface
-#
+
 class SmbWebClient extends Smb {
 
-var $javascript = '';
-
-# --------------------------------------------------------------------
-# Method: Run
-# Description: Main function
+# Main function:
 #   if this is an style file:  dump that file
 #   else
 #     if a method is requested:  do requested method
@@ -19,18 +15,18 @@ var $javascript = '';
 #     else
 #       if this is a file: dump that file
 #       else: show that directory
-#
+
 function Run () {
-  $this->style = &$GLOBALS['style'];
+  global $style;
 
-  if (! isset($_REQUEST['path'])) $_REQUEST['path'] = '';
+  $this->path = @$_REQUEST['path'];
 
-  if (isset($this->style[$_REQUEST['path']])) {
-    $this->StyleFile($_REQUEST['path']);
+  if (isset($style[$this->path])) {
+    $this->StyleFile($this->path);
     exit;
   }
 
-  $this->GetTarget($_REQUEST['path']);
+  $this->GetTarget($this->path);
   $this->GetUser();
 
   if (isset($_REQUEST['method'])) $this->DoMethod($_REQUEST['method']);
@@ -55,10 +51,9 @@ function Run () {
     $this->ListView();
 }
 
-# --------------------------------------------------------------------
-# Method: GetUrl
-# Description: return an URL (adding a param)
-#
+
+# Return an URL (adding a param)
+
 function GetUrl ($arg='', $val='') {
   # REQUEST_URI: compatibility with other web servers than Apache
   if (! isset($_SERVER['REQUEST_URI'])) {
@@ -106,21 +101,22 @@ function GetUrl ($arg='', $val='') {
   return $url;
 }
 
-# --------------------------------------------------------------------
-# Method: StyleFile
-# Description: Dumps an style file
-#
+
+# Dumps an style file
+
 function StyleFile ($file) {
+  global $style;
+
   if (cfgInlineStyle == 'off') {
     if (! is_readable($file)) {
       $f = fopen($file, 'wb');
-      fwrite($f, base64_decode($this->style[$file]));
+      fwrite($f, base64_decode($style[$file]));
       fclose($f);
     }
     GetMimeFile ($file, $file);
   } else {
     GetMimeFile ('', $file);
-    $f = base64_decode($this->style[$file]);
+    $f = base64_decode($style[$file]);
     if ($file == 'style.css') {
       $f = str_replace('smbwebclient.php', basename($_SERVER['SCRIPT_NAME']), $f);
     }
@@ -128,85 +124,81 @@ function StyleFile ($file) {
   }
 }
 
-# --------------------------------------------------------------------
-# Method: LoadTemplate
-# Description: Loads an HTML template
-#
+
+# Loads an HTML template
+
 function LoadTemplate ($file, $vars) {
+  global $style;
+
   if (cfgInlineStyle == 'off') {
     if (! is_readable($file)) {
       $f = fopen($file, 'wb');
-      fwrite($f, base64_decode($this->style[$file]));
+      fwrite($f, base64_decode($style[$file]));
       fclose($f);
     }
     $f = fopen($file, 'r');
     $template = fread ($f, filesize($file));
     fclose ($f);
   } else {
-    $template = base64_decode($this->style[$file]);
+    $template = base64_decode($style[$file]);
   }
   return str_replace(array_keys($vars), array_values($vars), $template);
 }
 
-# --------------------------------------------------------------------
-# Method: _
-# Description: Returns a translated string
-#
+
+# Returns a translated string
+
 function _($str) { return GetString($str); }
 
-# --------------------------------------------------------------------
-# Method: GetUser
-# Description: Load user info
-#
-function GetUser() {
-  # get user authentication from Share to Network
 
+# Load user info
+
+function GetUser() {
+
+  # auth from session
+  $auth = array ('login'=>'', 'password'=>'');
+  if (@$_GET['auth'] <> '1')
   foreach (array('Share','Server','Workgroup', 'Network') as $mode) {
     $name = $this->info[strtolower($mode)];
-    if (isset($_SESSION['SmbWebClient_Auth'][$mode][$name]))
-      $auth = $_SESSION['SmbWebClient_Auth'][$mode][$name];
-    else
-      $auth = '';
-    if (is_array($auth)) {
-      $login = $auth['login']; 
-      $password = $auth['password'];
+    if (isset($_SESSION['Auth'][$mode][$name])) {
+/*
+      if (@$_GET['auth'] == '1')
+        $_SESSION['Auth'][$mode][$name] = $auth;
+      else
+*/
+        $auth = $_SESSION['Auth'][$mode][$name];
       break;
     }
   }
 
-  if (isset($_POST['login']) AND isset($_POST['password']) AND $_POST['login']<>'' AND $_POST['password']<>'') {
+  # auth from login form
+  if (isset($_POST['login']) AND isset($_POST['password'])) {
+    $auth = array ('login'=>$_POST['login'], 'password'=>$_POST['password']);
+    $_SESSION['Auth'][$this->type][$this->name] = $auth;
+  }
 
-    # authenticating user
-    $_SESSION['SmbWebClient_Auth'][$this->type][$this->name] = array (
-      'login' => $_POST['login'],
-      'password' => $_POST['password']
-    );
-    $login = $_POST['login'];
-    $password = $_POST['password'];
+  # auth needed (print login form)
+  if ($auth['login'] == '' AND (@$_GET['auth'] == '1' OR cfgAnonymous <> 'on')) {
 
-  } elseif (isset($_GET['auth']) OR (! isset($login)) OR $login == '' OR $password == '') {
-
-    # authentication is needed (form)
     print $this->Page ('', $this->LoadTemplate('style/template-auth.html', array (
       '{action}' => $_SERVER['SCRIPT_NAME'],
       '{input_network_password}' => $this->_('Input the network password'),
       '{cancel}' => $this->_('Cancel'),
-      '{resource}' => $this->_($this->winpath),
+      '{resource}' => $this->_($this->win_path),
       '{user}' => $this->_('User'),
       '{password}' => $this->_('Password'),
-      '{hidden_path}' => htmlspecialchars($_REQUEST['path']),
+      '{hidden_path}' => htmlspecialchars($this->path),
       '{login}' => $this->_('Ok')
     )));
     exit;
   }
 
-  $this->SetUser($login, $password);
+  $this->SetUser($auth['login'], $auth['password']);
 }
 
-# --------------------------------------------------------------------
-# Method: DoMethod
-# Description: Calls a given method
-#
+
+# Calls a given method
+
 function DoMethod($method) {
   switch ($method) {
     case 'ListViewAction':   $this->ListViewAction(); break;
@@ -215,12 +207,10 @@ function DoMethod($method) {
 }
 
 
-# --------------------------------------------------------------------
-# Method: PrintErrorMessage
-# Description: Show an error message
-#
+# Show an error message
+
 function PrintErrorMessage () {
-  print $this->Page ($this->winpath, $this->LoadTemplate('style/template-error.html', array (
+  print $this->Page ($this->win_path, $this->LoadTemplate('style/template-error.html', array (
     '{action}' => $_SERVER['SCRIPT_NAME'],
     '{error}' => $this->_('Error'),
     '{ok}' => $this->_('Ok'),
@@ -230,55 +220,50 @@ function PrintErrorMessage () {
   exit;
 }
 
-# --------------------------------------------------------------------
-# Method: Log
-# Description: Logging
-#
+
+# Logging
+
 function Log () {
   if (! isset($this->size)) $this->size = 0;
   if (cfgLogFile <> '')
     @error_log ("{$_SERVER['REMOTE_ADDR']} - ".
       "{$this->login} [".date('d/M/Y:h:i:s O')."]".
-      " \"GET {$this->winpath} HTTP/1.1\" 200 ".intval($this->size).
+      " \"GET {$this->win_path} HTTP/1.1\" 200 ".intval($this->size).
       " \"{$_SERVER['REQUEST_URI']}\" \"{$_SERVER['HTTP_USER_AGENT']}\"\n",
       3,cfgLogFile);
 }
 
-# --------------------------------------------------------------------
-# Method: Page
-# Description: HTML page
-#
+
+# HTML page
+
 function Page ($title, $content) {
   return $this->LoadTemplate('style/template-page.html', array(
     '{stylesheet}' => $this->GetUrl('path','style/style.css'),
     '{lang}' => $_SESSION['Language'],
     '{title}' => $title,
-    '{javascript}' => $this->javascript,
     '{content}' => $content
     ));
 }
 
-# --------------------------------------------------------------------
-# Method: Link
-# Description: HTML a href
-#
-function Link ($title, $url='') {
-  return ($url == '') ? $title : "<a href=\"{$url}\">{$title}</a>";
+
+# HTML a href
+
+function Link ($title, $url='', $name='') {
+  if ($name <> '') $name = "name = \"{$name}\"";
+  return ($url == '') ? $title : "<a href=\"{$url}\" {$name}>{$title}</a>";
 }
 
-# --------------------------------------------------------------------
-# Method: Image
-# Description: HTML img
-#
+
+# HTML img
+
 function Image ($url, $alt='') {
   return ($url == '') ? $title : "<img src=\"{$url}\" alt=\"{$alt}\" border=\"0\" />";
 }
 
-# --------------------------------------------------------------------
-# Method: ListView
-# Description: print a list view of domains, servers, shared resources,
-#   files or printer jobs.
-#
+
+# Print a list view of domains, servers, shared resources,
+# files or printer jobs.
+
 function ListView () {
   $items_are_files = FALSE;
   switch ($this->type) {
@@ -330,16 +315,16 @@ function ListView () {
   $col_class[$_SESSION['order'][0]] = "class=\"order-by\"";
 
   # print up link
-  if ($_REQUEST['path'] <> '') {
+  if ($this->path <> '') {
     $html .= "<tr>";
     if ($items_are_files) {
       $html .= "<td width=\"20\" align=\"right\">&nbsp;</td>";
     }
     $html .= "<td class=\"icon\" width=\"20\" align=\"right\">".
       $this->Link($this->Image($this->GetUrl('path','style/dotdot.jpg'),'..'),
-      $this->GetUrl('path', $this->FromPath('..')))."</td>";
+      $this->GetUrl('path', $this->FromPath('..'))."#".basename($this->path))."</td>";
     $html .= "<td {$col_class['N']}>".$this->Link('..',
-      $this->GetUrl('path', $this->FromPath('..')))."</td>";
+      $this->GetUrl('path', $this->FromPath('..'))."#".basename($this->path))."</td>";
     if (! $items_are_files) {
       $html .= "<td {$col_class['M']}>&nbsp;</td>";
     } else {
@@ -374,7 +359,7 @@ function ListView () {
     $html .= "<td width=\"20\" align=\"right\" class=\"icon\">{$img}</td>";
     $html .= "<td {$col_class['N']}><nobr>".$this->Link($file['name'], 
         $this->type == 'Printer'
-            ? '' : $this->GetUrl('path', $this->FromPath($file['name'])))
+            ? '' : $this->GetUrl('path', $this->FromPath($file['name'])), $file['name'])
           ."</td></nobr>";
 
     if (! $items_are_files) {
@@ -398,7 +383,7 @@ function ListView () {
   if ($items_are_files) {
     $html =  $this->LoadTemplate('style/template-listview.html',  array(
       '{action}' => $_SERVER['SCRIPT_NAME'],
-      '{hidden_path}' => htmlspecialchars($_REQUEST['path']),
+      '{hidden_path}' => htmlspecialchars($this->path),
       '{files}' => $html,
       '{delete}' => $this->type == 'Printer'
         ? $this->_('Cancel Selected')
@@ -409,27 +394,12 @@ function ListView () {
     ));
   } 
 
-  # do check all
-  $this->javascript =
-  "<script language=\"JavaScript\">\n".
-  "  function sel_all(master_select) {\n".
-  "    with (document.d_form) {\n".
-  "      for (i=0; i<elements.length; i++) {\n".
-  "        ele = elements[i];\n".
-  "      if (ele.type==\"checkbox\")\n".
-  "          ele.checked = master_select.checked;\n".
-  "      }\n".
-  "    }\n".
-  "  }\n".
-  "</script>\n";
-
-  print $this->Page($this->winpath,"<div id=\"directory\">\n{$html}\n</div>");
+  print $this->Page($this->win_path,"<div id=\"directory\">\n{$html}\n</div>");
 }
 
-# --------------------------------------------------------------------
-# Method: ListViewAction
-# Description: form action
-#
+
+# Form action
+
 function ListViewAction () {
   if ($_POST['do'] == $this->_('New File')) {
     $this->Samba('file_exists', $_FILES['file']['name']);
@@ -440,7 +410,7 @@ function ListViewAction () {
       header("Location: ".$this->GetUrl(array(
         'method' => 'ConfirmOverwrite',
         'file' => basename($file),
-        'path' => urlencode($_REQUEST['path']),
+        'path' => urlencode($this->path),
         'name' => $_FILES['file']['name']
       )));
       exit;
@@ -460,22 +430,21 @@ function ListViewAction () {
       foreach ($_POST['selected'] as $id) $this->Samba('cancel', $id);
   }
   if (! $_SESSION['DebugLevel']) {
-    header("Location: ".$this->GetUrl('path', $_REQUEST['path']));
+    header("Location: ".$this->GetUrl('path', $this->path));
     exit;
   }
 }
 
-# --------------------------------------------------------------------
-# Method: ConfirmOverwrite
-# Description: form action
-#
+
+# Form action
+
 function ConfirmOverwrite () {
   print $this->Page('', $this->LoadTemplate('style/template-confirmoverwrite.html', array(
     '{save_as}' => $this->_('Save as'),
     '{action}' => $_SERVER['SCRIPT_NAME'],
     '{hidden_file}' => htmlspecialchars($_REQUEST['file']),
     '{hidden_name}' => htmlspecialchars($_REQUEST['name']),
-    '{hidden_path}' => htmlspecialchars(urldecode($_REQUEST['path'])),
+    '{hidden_path}' => htmlspecialchars(urldecode($this->path)),
     '{overwrite_question}' => $this->_('Overwrite this file?'),
     '{yes}' => $this->_('Yes, overwrite'),
     '{no}' => $this->_('No, do not overwrite')
@@ -483,10 +452,9 @@ function ConfirmOverwrite () {
   exit;
 }
 
-# --------------------------------------------------------------------
-# Method: SortItems
-# Description: Makes an index to show files
-#
+
+# Makes an index to show files
+
 function SortItems ($items) {
   # storing order
   if (! isset($_SESSION['order'])) {
@@ -525,10 +493,9 @@ function SortItems ($items) {
   return $index;
 }
 
-# --------------------------------------------------------------------
-# Method: GreaterThan
-# Description: Compares two file records
-#
+
+# Compares two file records
+
 function GreaterThan($name1, $info1, $name2, $info2) {
   switch ($_SESSION['order']) {
     case 'SA':

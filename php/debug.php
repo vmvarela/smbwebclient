@@ -1,8 +1,8 @@
 <?php
-# --------------------------------------------------------------------
-# Function: Debug
-# Description: Debugging messajes
-#
+
+
+# Debugging messajes
+
 function Debug ($message, $level = 1) {
   if (isset($_GET['debug'])) {
     $_SESSION['DebugLevel'] = $_GET['debug'];
