@@ -28,4 +28,5 @@ $strings = array (
   'et' => array('Windowsi võrk','Nimi','Suurus','Kommentaarid','Muudetud','Tööriistad','d/m/Y h:i','Trüki','Kustuta valitud','Uus fail','Tühista valitud','Kasutaja','Salasõna','Kasutajanimi','Kirjutan selle faili üle ?','Jah ,kirjuta','Ei, ära kirjuta','Sisesta võrgu salasõna','Katkesta','Korras','Viga','Salvesta kui'),
   'en' => array('Windows Network','Name','Size','Comments','Modified','Attributes','m/d/Y h:i','Print','Delete Selected','New File','Cancel Selected','User','Password','login','Overwrite this file?','Yes, overwrite','No, do not overwrite','Input the network password','Cancel','Ok','Error','Save as'),
 );
+
 ?>

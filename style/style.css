@@ -102,12 +102,14 @@ caption {
 #alert {
   margin:20px 20px;
 }
+
 #alert table {
   background-color: #C0C0C0;
   border-color: #C0C0C0;
   border-style: outset;
   border-size:30px;
 }
+
 #alert p {
   background-image: url(smbwebclient.php?path=style/alert.jpg);
   background-repeat:no-repeat;
@@ -116,6 +118,7 @@ caption {
   padding-top:12px;
   padding-left: 37px;
 }
+
 #alert input.button {
   margin-bottom:2em;
   margin-left:2em;

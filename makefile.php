@@ -59,7 +59,7 @@ function MakeMimeTypesArray ($mt_f) {
 #
 function MakeStyleArray() {
   print "<?php\n";
-  $archivos = explode("\n",str_replace(" ", "", `ls style`));
+  $archivos = explode("\n",str_replace(" ", "", `ls style/*.*`));
 ?>
 #
 # Theme files
@@ -68,13 +68,13 @@ function MakeStyleArray() {
 <?php
   print "\$style = array (\n";
   foreach ($archivos as $archivo) if ($archivo <> '') {
-    if (! is_readable("style/{$archivo}")) $encoded = "**error**";
+    if (! is_readable($archivo)) $encoded = "**error**";
     else {
-      $f = fopen("style/{$archivo}", "r");
-      $encoded = base64_encode(fread($f, filesize("style/{$archivo}")));
+      $f = fopen($archivo, "r");
+      $encoded = base64_encode(fread($f, filesize($archivo)));
       fclose($f);
     }
-    print "  'style/{$archivo}' => '{$encoded}',\n";
+    print "  '$archivo' => '$encoded',\n";
   }
   print ");\n\n?>";
 }

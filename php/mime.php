@@ -89,4 +89,38 @@ $mime_types = array (
   'asf'=>'video/x-ms-asf', 'asx'=>'video/x-ms-asf', 'avi'=>'video/x-msvideo', 
   'movie'=>'video/x-sgi-movie', 'ice'=>'x-conference/x-cooltalk', 'vrm'=>'x-world/x-vrml'
 );
+
+# --------------------------------------------------------------------
+# Method: GetMimeFile
+# Description: Dumps a file with MIME headers
+#
+function GetMimeFile($file='', $name='', $is_attachment=0) {
+  global $mime_types;
+
+  if ($name == '') $name = basename($file);
+  $pi = pathinfo(strtolower($name));
+  $mime_type = $mime_types[$pi['extension']];
+  if ($mime_type == '') $mime_type = 'application/octet-stream';
+  # dot bug with IE
+  if (strstr($_SERVER['HTTP_USER_AGENT'], "MSIE")) {
+    $name = preg_replace('/\./','%2e', $name, substr_count($name, '.') - 1);
+  }
+  header('MIME-Version: 1.0');
+  header("Content-Type: $mime_type; name =\"".htmlentities($name)."\"");
+  if ($is_attachment)
+    header("Content-Disposition: attachment; filename=\"".htmlentities($name)."\"");
+  else
+    header("Content-Disposition: filename=\"".htmlentities($name)."\"");
+  if ($file <> '' AND is_readable($file)) {
+    $fp = fopen($file, "r");
+    while (! feof($fp)) {
+      print fread($fp,1024*1024);
+      flush();
+    }
+    fclose($fp);
+  }
+}
+
+
+
 ?>

@@ -8,6 +8,8 @@ $includes = array (
   'languages',
   'style',
   'mime',
+  'debug',
+  'smb',
   'smbwebclient',
   'main'
 );

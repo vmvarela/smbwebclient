@@ -3,7 +3,7 @@
 # File:    smbwebclient.php
 # Author:  Victor M. Varela <vmvarela@nivel0.net>
 #
-# {Id: smbwebclient.php,v 1.76 2004/04/12 11:53:44 vmvarela Exp }
+# @@@Id: smbwebclient.php,v 1.76 2004/04/12 11:53:44 vmvarela Exp @@@
 #
 # Description:
 #    This script is a web interface to Windows Networks.

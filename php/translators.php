@@ -32,7 +32,6 @@
 #   [es] BobMarley, bobmarley@telefonica.net
 #   [es] Juan Manuel García Molina, juanma@superiodico.net
 #   [pt] André Pestana, andrepestana@yahoo.com
-#   [pt] Euripedes Jr, euripedes@prsp.mpf.gov.br
 #   [eo] juancatala@linuxmail.org
 #   [it] Osvaldo Frassine, ofrassine@slacky.it
 #   [et] fred.el@mail.ee
