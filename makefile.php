@@ -120,7 +120,7 @@ function MakeSmbWebClient () {
     foreach ($includes as $archivo) if ($archivo <> '') {
       $a = file("php/".$archivo.".php");
       for ($i = 1; $i < count($a)-1; $i++) {
-        $smbwebclient[] = $a[$i];
+        $smbwebclient[] = str_replace('@@@', '$', $a[$i]);
       }
     }
     print "<?php\n";
