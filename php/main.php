@@ -10,6 +10,9 @@ error_reporting(E_ALL ^ E_NOTICE);
 
 session_name('SmbWebClientID');
 session_start();
+
+InitLanguage();
+
 $smb = new SmbWebClient;
 
 header("Cache-control: private");

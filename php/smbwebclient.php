@@ -7,13 +7,6 @@ class SmbWebClient extends Smb {
 
 var $javascript = '';
 
-function SmbWebClient () {
-  $this->style = &$GLOBALS['style'];
-  $this->mime_types = &$GLOBALS['mime_types'];
-  $this->languages = &$GLOBALS['languages'];
-  $this->strings = &$GLOBALS['strings'];
-}
-
 # --------------------------------------------------------------------
 # Method: Run
 # Description: Main function
@@ -28,14 +21,16 @@ function SmbWebClient () {
 #       else: show that directory
 #
 function Run () {
+  $this->style = &$GLOBALS['style'];
+
   if (! isset($_REQUEST['path'])) $_REQUEST['path'] = '';
 
   if (isset($this->style[$_REQUEST['path']])) {
     $this->StyleFile($_REQUEST['path']);
     exit;
-  } else
-    $this->GetTarget($_REQUEST['path']);
+  }
 
+  $this->GetTarget($_REQUEST['path']);
   $this->GetUser();
 
   if (isset($_REQUEST['method'])) $this->DoMethod($_REQUEST['method']);
@@ -50,7 +45,7 @@ function Run () {
     default: $this->PrintErrorMessage();
   }
 
-  if ($_SESSION['SmbWebClient_Debug']) exit;
+  if ($_SESSION['DebugLevel'] > 0) exit;
 
   if ($this->type == 'File') {
     GetMimeFile($this->cachefile, $this->name, isset($_REQUEST['download']));
@@ -157,59 +152,15 @@ function LoadTemplate ($file, $vars) {
 # Method: _
 # Description: Returns a translated string
 #
-function _($str) {
-  if ($this->lang == 'en') return $str;
-  $pos = array_search ($str, $this->strings['en']);
-  if (($pos = array_search ($str, $this->strings['en'])) === FALSE)
-    return $str;
-  if ($this->strings[$this->lang][$pos] <> '')
-    return $this->strings[$this->lang][$pos];
-  if ($this->strings[cfgDefaultLanguage][$pos] <> '')
-    return $this->strings[cfgDefaultLanguage][$pos];
-  return $str;
-}
+function _($str) { return GetString($str); }
 
 # --------------------------------------------------------------------
 # Method: GetUser
-# Description: Load user info (auth, language)
+# Description: Load user info
 #
 function GetUser() {
-  # language setup
-  if (isset($_GET['lang']) AND isset($this->strings[$_GET['lang']]))
-    $_SESSION['SmbWebClient_Lang'] = $_GET['lang'];
-
-  # take a look at HTTP_ACCEPT_LANGUAGE
-  if (! isset($_SESSION['SmbWebClient_Lang'])) {
-    $accepted_languages = split(',', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-    foreach ($accepted_languages as $lang)
-      foreach ($this->languages as $key => $filter)
-        if (eregi('^('.$filter.')(;q=[0-9]\\.[0-9])?$', $lang)) {
-          $_SESSION['SmbWebClient_Lang'] = $key;
-          break 2;
-        }  
-  }
-
-  # look at HTTP_USER_AGENT
-  if (! isset($_SESSION['SmbWebClient_Lang'])) {
-    reset($this->languages);
-    foreach ($this->languages as $key => $filter)
-      if (eregi('(\(|\[|;[[:space:]])(' . $filter . ')(;|\]|\))',
-        $_SERVER['HTTP_USER_AGENT'])) {
-        $_SESSION['SmbWebClient_Lang'] = $key;
-        break;
-      }
-  }
-
-  # default language
-  if (! isset($_SESSION['SmbWebClient_Lang']))
-   $_SESSION['SmbWebClient_Lang'] = cfgDefaultLanguage;
-
-  # search preferred language in available languages
-  $this->lang = $_SESSION['SmbWebClient_Lang'];
-  if (! is_array($this->strings[$this->lang]))
-    $this->lang = cfgDefaultLanguage;
-
   # get user authentication from Share to Network
+
   foreach (array('Share','Server','Workgroup', 'Network') as $mode) {
     $name = $this->info[strtolower($mode)];
     if (isset($_SESSION['SmbWebClient_Auth'][$mode][$name]))
@@ -287,7 +238,7 @@ function PrintErrorMessage () {
 function Log () {
   if (! isset($this->size)) $this->size = 0;
   if (cfgLogFile <> '')
-    error_log ("{$_SERVER['REMOTE_ADDR']} - ".
+    @error_log ("{$_SERVER['REMOTE_ADDR']} - ".
       "{$this->login} [".date('d/M/Y:h:i:s O')."]".
       " \"GET {$this->winpath} HTTP/1.1\" 200 ".intval($this->size).
       " \"{$_SERVER['REQUEST_URI']}\" \"{$_SERVER['HTTP_USER_AGENT']}\"\n",
@@ -301,7 +252,7 @@ function Log () {
 function Page ($title, $content) {
   return $this->LoadTemplate('style/template-page.html', array(
     '{stylesheet}' => $this->GetUrl('path','style/style.css'),
-    '{lang}' => $this->lang,
+    '{lang}' => $_SESSION['Language'],
     '{title}' => $title,
     '{javascript}' => $this->javascript,
     '{content}' => $content
@@ -368,7 +319,7 @@ function ListView () {
     }
   }
   $html .= "<th width=\"100%\"><table cellpadding=0 cellspacing=0 border=0 align=\"right\"><tr>";
-  $html .= "<td class=\"lang\">".strtoupper($this->lang)."</td>";
+  $html .= "<td class=\"lang\">".strtoupper($_SESSION['Language'])."</td>";
   $html .= "<td class=\"logout\">".$this->Link($this->Image($this->GetUrl('path','style/logout.jpg'),$this->_('Logout')),
       $this->GetUrl('auth',1))."</td>";
   $html .= "</tr></table></th>";
@@ -508,7 +459,7 @@ function ListViewAction () {
     if (is_array($_POST['selected']))
       foreach ($_POST['selected'] as $id) $this->Samba('cancel', $id);
   }
-  if (! $_SESSION['SmbWebClient_Debug']) {
+  if (! $_SESSION['DebugLevel']) {
     header("Location: ".$this->GetUrl('path', $_REQUEST['path']));
     exit;
   }

@@ -1,6 +1,55 @@
 <?php
 
-include "php/languages.php";
+$languages = array(
+  'af' => 'Afrikaans',
+  'ar' => 'Arabic',
+  'az' => 'Azerbaijani',
+  'bg' => 'Bulgarian',
+  'bs' => 'Bosnian',
+  'ca' => 'Catalan',
+  'cs' => 'Czech',
+  'da' => 'Danish',
+  'de' => 'German',
+  'el' => 'Greek',
+  'en' => 'English',
+  'eo' => 'Esperanto',
+  'es' => 'Spanish',
+  'et' => 'Estonian',
+  'eu' => 'Basque',
+  'fa' => 'Persian',
+  'fi' => 'Finnish',
+  'fr' => 'French',
+  'gl' => 'Galician',
+  'he' => 'Hebrew',
+  'hi' => 'Hindi',
+  'hr' => 'Croatian',
+  'hu' => 'Hungarian',
+  'id' => 'Indonesian',
+  'it' => 'Italian',
+  'ja' => 'Japanese',
+  'ko' => 'Korean',
+  'ka' => 'Georgian',
+  'lt' => 'Lithuanian',
+  'lv' => 'Latvian',
+  'ms' => 'Malay',
+  'nl' => 'Dutch',
+  'no' => 'Norwegian',
+  'pl' => 'Polish',
+  'pt-br' => 'Brazilian Portuguese',
+  'pt' => 'Portuguese',
+  'ro' => 'Romanian',
+  'ru' => 'Russian',
+  'sk' => 'Slovak',
+  'sl' => 'Slovenian',
+  'sq' => 'Albanian',
+  'sr' => 'Serbian',
+  'sv' => 'Swedish',
+  'th' => 'Thai',
+  'tr' => 'Turkish',
+  'uk' => 'Ukrainian',
+  'zh-tw' => 'Chinese Traditional',
+  'zh' => 'Chinese Simplified'
+);
 
 class SmbWebClientBuild {
 
@@ -10,16 +59,23 @@ class SmbWebClientBuild {
 #
 function ListTranslators() {
   global $languages;
-  print "<?php\n";
-  print "#  Translators:\n";
+  print "<?php\n#\n";
+  print "# Translators:";
   $lines = file("http://www.nivel0.net/SmbWebClientTranslationData/export.xml");
   $lang = join('|',array_keys($languages));
+  $curlang = '';
   foreach ($lines as $line) {
     if (ereg('^\[([0-9]{3})\](.*)$', $line, $regs) OR
         ereg('^\[(.*)\]\[([0-9]{3})\](.*)$', $line, $regs)) {
       continue;
     } elseif (ereg('^\[('.$lang.'})\](.*)$', $line, $regs)) {
-      print "#   [{$regs[1]}] {$regs[2]}";
+      $regs[2] = str_replace("\n", "", $regs[2]);
+      if ($curlang == $regs[1])
+        print "; {$regs[2]}";
+      else {
+        print "\n#   {$languages[$regs[1]]}: {$regs[2]}";
+        $curlang = $regs[1];
+      }
     }
   }
   print "\n?>";
@@ -85,12 +141,6 @@ function MakeStyleArray() {
 #
 function MakeStringsArray() {
   print "<?php\n";
-?>
-#
-# Available translations at
-# http://wwww.nivel0.net/SmbWebClientTranslation
-#
-<?php
   $lines = file("http://www.nivel0.net/SmbWebClientTranslationData/export.xml");
   foreach ($lines as $line) {
     if (ereg('^\[([0-9]{3})\](.*)$', $line, $regs)) {
@@ -99,6 +149,12 @@ function MakeStringsArray() {
       $translation[$regs[1]][intval($regs[2])] = $regs[3];
     }
   }
+?>
+#
+# Available <?php print count($translation) ?> languages at
+# http://wwww.nivel0.net/SmbWebClientTranslation
+#
+<?php
   $translation['en'] = $original;
   print '$strings = array ('."\n";
   foreach ($translation as $lang => $s) {
@@ -120,7 +176,7 @@ function MakeSmbWebClient () {
     foreach ($includes as $archivo) if ($archivo <> '') {
       $a = file("php/".$archivo.".php");
       for ($i = 1; $i < count($a)-1; $i++) {
-        $smbwebclient[] = str_replace('@@@', '$', $a[$i]);
+        $smbwebclient[] = $a[$i];
       }
     }
     print "<?php\n";

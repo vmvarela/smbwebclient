@@ -91,7 +91,7 @@ $mime_types = array (
 );
 
 # --------------------------------------------------------------------
-# Method: GetMimeFile
+# Function: GetMimeFile
 # Description: Dumps a file with MIME headers
 #
 function GetMimeFile($file='', $name='', $is_attachment=0) {
@@ -120,7 +120,5 @@ function GetMimeFile($file='', $name='', $is_attachment=0) {
     fclose($fp);
   }
 }
-
-
 
 ?>
