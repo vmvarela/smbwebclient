@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}Login{% endblock title %}
+
+{% block content %}
+<h2>Login to SMB Server</h2>
+<form method="post" action="/login">
+    <div>
+        <label for="server">SMB Server Address:</label>
+        <input type="text" id="server" name="server" value="{{ default_server }}" placeholder="e.g., 192.168.1.100 or MYNAS (blank uses default from config)">
+    </div>
+    <div>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    <div>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+    </div>
+    <div>
+        <label for="domain">Domain (Optional):</label>
+        <input type="text" id="domain" name="domain" placeholder="e.g., WORKGROUP or your.domain.com">
+    </div>
+    <div>
+        <input type="submit" value="Login">
+    </div>
+</form>
+{% endblock content %}

@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+
+{% block title %}Browse - {{ current_display_path }}{% endblock title %}
+
+{% block content %}
+<h2>Browse SMB - {{ current_display_path }}</h2>
+
+<div class="current-path">
+    Current Location:
+    <a href="/browse/{{ server_being_browsed }}/"><img src="/static/images/server.png" alt="Server" class="icon">{{ server_being_browsed }}</a> /
+    {% if share_being_browsed %}
+        <a href="/browse/{{ server_being_browsed }}/{{ share_being_browsed }}/">{{ share_being_browsed }}</a> /
+    {% endif %}
+    {% for segment in path_segments %}
+        {% if loop.last %}
+            {{ segment }}
+        {% else %}
+            <a href="/browse/{{ server_being_browsed }}/{{ share_being_browsed }}/{{ path_segments[0..loop.index] | join(sep="/") }}">{{ segment }}</a> /
+        {% endif %}
+    {% endfor %}
+</div>
+
+<form method="POST" action="/action_handler_placeholder"> {# Action handler is a placeholder #}
+    <div class="action-bar">
+        With selected:
+        <select name="action" disabled>
+            <option value="">Choose action...</option>
+            <option value="delete">Delete</option>
+            <option value="move">Move</option>
+            <option value="zip">Zip</option>
+        </select>
+        <input type="submit" value="Go" disabled>
+        <span style="float: right;">
+            <!-- Placeholder for other actions like Create Folder, Upload -->
+            <button type="button" disabled>Create Folder</button>
+            <button type="button" disabled>Upload File</button>
+        </span>
+        <p style="clear:both; margin-top: 5px;"><em>Note: Action buttons are currently placeholders.</em></p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30px;"><input type="checkbox" id="select_all_checkbox" title="Select all/none"></th>
+                <th style="width: 40px;">Icon</th>
+                <th><a href="?sort=name">Name <img src="/static/images/sort_down.png" alt="Sort" class="icon"></a></th>
+                <th style="width: 100px;"><a href="?sort=size">Size</a></th>
+                <th style="width: 100px;"><a href="?sort=type">Type</a></th>
+                <th style="width: 150px;"><a href="?sort=modified">Modified</a></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if show_up_link %}
+            <tr>
+                <td></td> {# No checkbox for "up" link #}
+                <td><img src="/static/images/dotdot.png" alt="Up" class="icon"></td>
+                <td><a href="{{ parent_path_display }}">.. (Up one level)</a></td>
+                <td></td>
+                <td>Parent Directory</td>
+                <td></td>
+            </tr>
+            {% endif %}
+
+            {% for item in items %}
+            <tr>
+                <td><input type="checkbox" name="selected_items[]" value="{{ item.name }}"></td>
+                <td>
+                    {% if item.is_share_item %}
+                        <img src="/static/images/share.png" alt="Share" class="icon">
+                    {% elif item.entry_type == "Directory" %}
+                        <img src="/static/images/folder.png" alt="Folder" class="icon">
+                    {% elif item.entry_type == "File" %}
+                        <img src="/static/images/file.png" alt="File" class="icon">
+                    {% else %}
+                         <!-- Optional: default icon for unknown -->
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_share_item %}
+                        <a href="/browse/{{ server_being_browsed }}/{{ item.name }}/">{{ item.name }}</a>
+                    {% elif item.entry_type == "Directory" %}
+                        {# Construct path: server/share/current_path_in_share/item_name #}
+                        <a href="/browse/{{ server_being_browsed }}/{{ share_being_browsed }}/{{ item.full_path | trim_start_matches(pat="/") }}">{{ item.name }}</a>
+                    {% else %} {# File #}
+                        {{ item.name }} {# Files are not clickable for browsing #}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.entry_type == "File" and item.size is defined %}
+                        {{ item.size }} B
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.is_share_item %}
+                        {{ item.share_type }}
+                    {% elif item.entry_type == "Directory" %}
+                        Directory
+                    {% elif item.entry_type == "File" %}
+                        File {# Or a more specific file type if available #}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.modified is defined and item.modified != 0 and (item.entry_type == "File" or item.entry_type == "Directory") %}
+                        {{ item.modified | date(format="%Y-%m-%d %H:%M") }}
+                    {% elif item.is_share_item and item.comment is defined %}
+                         {{ item.comment }} {# Display comment for shares if no modified date #}
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6">
+                    {% if is_listing_shares %}
+                        No shares found on server: <strong>{{ server_being_browsed }}</strong>.
+                    {% else %}
+                        No items found in this directory.
+                    {% endif %}
+                    {% if error_message %} <br>Error: {{ error_message }} {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</form>
+
+<div class="action-bar" style="margin-top: 20px; text-align: center;">
+    <p><em>End of list. Actions placeholder above.</em></p>
+</div>
+
+
+<hr>
+<small>
+    Debug Info:
+    <ul>
+        <li>Server: {{ server_being_browsed | default(value="N/A") }}</li>
+        <li>Share: {{ share_being_browsed | default(value="N/A (Listing Shares)") }}</li>
+        <li>Path in Share: {{ path_in_share | default(value="N/A") }}</li>
+        <li>Original URL Segment: /browse/{{ original_url_segment }}</li>
+        <li>Current Display Path: {{ current_display_path }}</li>
+        <li>Show "Up" Link: {{ show_up_link }}</li>
+        <li>"Up" Link Target: {{ parent_path_display }}</li>
+        <li>Path Segments for Breadcrumbs: {{ path_segments | join(sep=" / ") }}</li>
+    </ul>
+</small>
+
+<script>
+    // Basic JavaScript for "select all" checkbox functionality (optional, can be moved to a static .js file)
+    const selectAllCheckbox = document.getElementById('select_all_checkbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function(event) {
+            const itemCheckboxes = document.querySelectorAll('input[name="selected_items[]"]');
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.checked = event.target.checked;
+            });
+        });
+    }
+</script>
+
+{% endblock content %}
