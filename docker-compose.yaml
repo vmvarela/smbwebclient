@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  samba:
+    image: dperson/samba
+    container_name: samba
+    environment:
+      - TZ=UTC
+      - WORKGROUP=WORKGROUP
+      - PERMISSIONS
+      - USER=testuser;testpassword
+      - SHARE=share;/mount/share;yes;no;no;testuser
+    volumes:
+      - ./samba_share:/mount/share
+    ports:
+      - "139:139"
+      - "445:445"
+    networks:
+      - smb-net
+
+  backend:
+    build: ./server
+    container_name: smb-backend
+    environment:
+      - PORT=3000
+      - JWT_SECRET=dockersecret
+    ports:
+      - "3000:3000"
+    depends_on:
+      - samba
+    networks:
+      - smb-net
+
+  frontend:
+    build: ./client
+    container_name: smb-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - smb-net
+
+networks:
+  smb-net:
+    driver: bridge
