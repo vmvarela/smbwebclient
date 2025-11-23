@@ -2,10 +2,9 @@
   "name": "tui",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.js",
+  "main": "src/index.tsx",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "bun src/index.tsx",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -30,8 +29,6 @@
     "@types/ink": "^0.5.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.6",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
 }
