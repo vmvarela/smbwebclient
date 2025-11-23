@@ -4,7 +4,7 @@
   "description": "Backend for SMB Web Client",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "bun src/index.js",
     "test": "jest"
   },
   "dependencies": {
