@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  samba:
+    image: dperson/samba
+    container_name: samba
+    environment:
+      - TZ=UTC
+      - WORKGROUP=WORKGROUP
+      - PERMISSIONS
+      - USER=testuser;testpassword
+      - SHARE=share;/mount/share;yes;no;no;testuser
+    volumes:
+      - ./samba_share:/mount/share
+    ports:
+      - "139:139"
+      - "445:445"
+    networks:
+      - smb-net
+
+  api:
+    build: ./api
+    container_name: smb-api
+    environment:
+      - PORT=3000
+      - JWT_SECRET=dockersecret
+    ports:
+      - "3000:3000"
+    depends_on:
+      - samba
+    networks:
+      - smb-net
+
+  web:
+    build: ./web
+    container_name: smb-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - smb-net
+
+  tui:
+    build: ./tui
+    container_name: smb-tui
+    environment:
+      - API_URL=http://api:3000/api
+    depends_on:
+      - api
+    networks:
+      - smb-net
+    tty: true
+    stdin_open: true
+
+networks:
+  smb-net:
+    driver: bridge
