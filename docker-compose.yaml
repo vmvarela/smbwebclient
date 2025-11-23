@@ -18,9 +18,9 @@ services:
     networks:
       - smb-net
 
-  backend:
-    build: ./server
-    container_name: smb-backend
+  api:
+    build: ./api
+    container_name: smb-api
     environment:
       - PORT=3000
       - JWT_SECRET=dockersecret
@@ -31,15 +31,27 @@ services:
     networks:
       - smb-net
 
-  frontend:
-    build: ./client
-    container_name: smb-frontend
+  web:
+    build: ./web
+    container_name: smb-web
     ports:
       - "8080:80"
     depends_on:
-      - backend
+      - api
     networks:
       - smb-net
+
+  tui:
+    build: ./tui
+    container_name: smb-tui
+    environment:
+      - API_URL=http://api:3000/api
+    depends_on:
+      - api
+    networks:
+      - smb-net
+    tty: true
+    stdin_open: true
 
 networks:
   smb-net:
