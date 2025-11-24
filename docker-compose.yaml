@@ -1,0 +1,33 @@
+services:
+  app:
+    build:
+      context: .docker/php
+    volumes:
+      - ./apps/laravel:/app
+    ports:
+      - "8000:8000"
+    working_dir: /app
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    depends_on:
+      - samba
+
+  samba:
+    image: dperson/samba
+    environment:
+      - USER=test;test
+      - SHARE=public;/mount/public
+      - PERMISSIONS=777
+    ports:
+      - "139:139"
+      - "445:445"
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    volumes:
+      - samba_data:/mount
+
+volumes:
+  samba_data:
