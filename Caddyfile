@@ -1,0 +1,14 @@
+# FrankenPHP configuration for SMB Web Client
+
+{
+    frankenphp {
+        num_threads 4
+    }
+}
+
+:80 {
+    root * /app/public
+    route {
+        php_server
+    }
+}

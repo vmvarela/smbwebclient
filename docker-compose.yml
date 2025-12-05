@@ -1,0 +1,25 @@
+services:
+  smbwebclient:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./.env:/app/.env
+      - ./cache:/app/cache
+    environment:
+      - SERVER_NAME=:80
+    restart: unless-stopped
+
+  samba:
+    image: dperson/samba:latest
+    restart: unless-stopped
+    volumes:
+      - ./smb-share:/share
+      - ./smb.conf:/etc/samba/smb.conf:ro
+    ports:
+      - "139:139"
+      - "445:445"
+    command:
+      - -u
+      - "user;pass"
+      - -p
