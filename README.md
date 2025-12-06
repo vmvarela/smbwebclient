@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="public/assets/images/icon.svg" alt="SMB Web Client Logo" width="200">
-</p>
-
-<p align="center">
   <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml/badge.svg" alt="PHP CI"></a>
   <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml/badge.svg" alt="Docker Build"></a>
   <a href="https://github.com/vmvarela/smbwebclient/pkgs/container/smbwebclient"><img src="https://ghcr-badge.egpl.dev/vmvarela/smbwebclient/size" alt="Docker Image Size"></a>
@@ -220,7 +216,9 @@ vendor/bin/phpstan analyse src
 
 ## License
 
-GPL-2.0-or-later
+MIT License - Copyright (c) 2003-2025 Victor M. Varela
+
+See [LICENSE](LICENSE) file for details.
 
 ## Author
 

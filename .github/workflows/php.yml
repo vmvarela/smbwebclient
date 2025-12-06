@@ -2,7 +2,6 @@ name: PHP CI
 
 on:
   push:
-    branches: [ "**" ]
   pull_request:
     branches: [ "master" ]
 
@@ -10,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:

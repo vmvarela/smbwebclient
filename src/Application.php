@@ -1148,12 +1148,12 @@ class Application
                 return $ext ? $this->translator->translate(12, $ext) : '';
             };
 
-            $comparison = 0;
-            match ($this->sortBy) {
-                'name' => $comparison = strcasecmp($a->getName(), $b->getName()),
-                'size' => $comparison = ($a->getSize() ?? 0) <=> ($b->getSize() ?? 0),
-                'modified' => $comparison = ($a->getMTime() ?? 0) <=> ($b->getMTime() ?? 0),
-                'type' => $comparison = strcasecmp($typeValue($a), $typeValue($b)),
+            $comparison = match ($this->sortBy) {
+                'name' => strcasecmp($a->getName(), $b->getName()),
+                'size' => ($a->getSize() ?? 0) <=> ($b->getSize() ?? 0),
+                'modified' => ($a->getMTime() ?? 0) <=> ($b->getMTime() ?? 0),
+                'type' => strcasecmp($typeValue($a), $typeValue($b)),
+                default => 0,
             };
 
             if ($comparison === 0 && $this->sortBy !== 'name') {

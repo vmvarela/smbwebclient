@@ -89,9 +89,15 @@ class SmbClient
                     return false;
                 }
                 
-                // Filter printer shares
-                if ($this->config->hidePrinterShares && $share->getType() === IShare::TYPE_PRINTER) {
-                    return false;
+                // Filter printer shares (check share name pattern)
+                if ($this->config->hidePrinterShares) {
+                    $shareName = $share->getName();
+                    // Printer shares typically end with $, but also check for common patterns
+                    if (str_ends_with($shareName, '$') || 
+                        stripos($shareName, 'print') !== false ||
+                        stripos($shareName, 'lpt') !== false) {
+                        return false;
+                    }
                 }
                 
                 return true;
@@ -196,26 +202,6 @@ class SmbClient
     {
         // Temporarily disabled - icewind/smb doesn't support listing directories reliably
         throw new \Exception("Recursive delete not yet supported");
-    }
-
-    private function deleteDirectoryContents($share, string $path): void
-    {
-        try {
-            $items = array_filter(iterator_to_array($share->dir($path)), function($item) {
-                return $item->getName() !== '.' && $item->getName() !== '..';
-            });
-            foreach ($items as $item) {
-                $itemPath = rtrim($path, '/') . '/' . $item->getName();
-                if ($item->isDirectory()) {
-                    $this->deleteDirectoryContents($share, $itemPath);
-                    $share->rmdir($itemPath);
-                } else {
-                    $share->del($itemPath);
-                }
-            }
-        } catch (\Exception $e) {
-            // Continue deleting even if some items fail
-        }
     }
 
     public function createDirectory(string $serverHost, string $shareName, string $path): void

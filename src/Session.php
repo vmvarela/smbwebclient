@@ -6,9 +6,6 @@ namespace SmbWebClient;
 
 class Session
 {
-    private const AUTH_BASIC = 'BasicAuth';
-    private const AUTH_FORM = 'FormAuth';
-
     public function __construct(
         private readonly Config $config,
     ) {
