@@ -1,61 +1,56 @@
-# SMB Web Client - PHP 8 Modern Edition
+<p align="center">
+  <img src="public/assets/images/icon.svg" alt="SMB Web Client Logo" width="200">
+</p>
 
-Modern PHP 8 rewrite of the classic SMB Web Client using FrankenPHP and the icewind/smb library.
+# SMB Web Client
+
+A modern PHP 8 web-based file browser for SMB/CIFS network shares, powered by FrankenPHP and the icewind/smb library.
 
 ## Features
 
-- 🚀 **PHP 8.2+** with modern syntax (typed properties, match expressions, named arguments)
+- 🚀 **PHP 8.2+** with modern syntax (typed properties, constructor promotion, strict typing)
 - 🔥 **FrankenPHP** powered by Go and Caddy for high performance
-- 📦 **icewind/smb** library for native SMB/CIFS support (no more smbclient CLI)
-- 🎨 **Clean architecture** with PSR-4 autoloading and dependency injection
-- 🔒 **Secure authentication** with session management
-- 🌍 **Multi-language support** (Spanish, English, French)
+- 📦 **icewind/smb** library for native SMB/CIFS support
+- 🎨 **Multiple themes** (Windows, macOS, Ubuntu)
+- 🔒 **Session-based authentication** with credential management
+- 🌍 **Multi-language support** (40+ languages with auto-detection)
+- 📁 **File operations**: upload, download, create folders, delete, rename
+- 📦 **Folder download** as ZIP archive
+- 🖱️ **Drag & drop** file uploads
+- 🔄 **Sortable columns** (name, size, date, type)
 - 🐳 **Docker ready** with docker-compose
 
 ## Requirements
 
 - PHP 8.2 or higher
-- FrankenPHP (or any PHP web server)
-- libsmbclient library
+- libsmbclient library and PHP extension
 - Composer
 
-## Installation
+## Quick Start with Docker
 
-### Using Docker (Recommended)
-
-1. Clone the repository:
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/vmvarela/smbwebclient.git
 cd smbwebclient
-```
 
-2. Copy the environment file:
-```bash
+# Copy and configure environment
 cp .env.example .env
-```
+# Edit .env with your SMB server settings
 
-3. Edit `.env` with your SMB server configuration:
-```env
-SMB_DEFAULT_SERVER=your-smb-server
-SMB_ROOT_PATH=
-APP_DEFAULT_LANGUAGE=es
-```
-
-4. Build and run with Docker Compose:
-```bash
+# Start with Docker Compose
 docker-compose up -d
+
+# Access at http://localhost:8080
 ```
 
-5. Access the application at http://localhost:8080
-
-### Manual Installation
+## Manual Installation
 
 1. Install dependencies:
 ```bash
 composer install
 ```
 
-2. Configure your environment:
+2. Configure environment:
 ```bash
 cp .env.example .env
 # Edit .env with your settings
@@ -66,7 +61,7 @@ cp .env.example .env
 frankenphp run --config Caddyfile
 ```
 
-Or use PHP's built-in server:
+Or use PHP's built-in server for development:
 ```bash
 php -S localhost:8080 -t public
 ```
@@ -75,128 +70,118 @@ php -S localhost:8080 -t public
 
 All configuration is managed through environment variables in the `.env` file:
 
-### SMB Configuration
-- `SMB_DEFAULT_SERVER`: Default SMB server (default: localhost)
-- `SMB_ROOT_PATH`: Root path to restrict navigation
-- `SMB_HIDE_DOT_FILES`: Hide files starting with dot (default: true)
-- `SMB_HIDE_SYSTEM_SHARES`: Hide system shares like C$, ADMIN$ (default: true)
-- `SMB_HIDE_PRINTER_SHARES`: Hide printer shares (default: false)
+### SMB Settings
 
-### Application Configuration
-- `APP_DEFAULT_LANGUAGE`: Default language (es, en, fr)
-- `APP_DEFAULT_CHARSET`: Character encoding (default: UTF-8)
-- `APP_CACHE_PATH`: Path for cached files
-- `APP_SESSION_NAME`: Custom session name
-- `APP_ALLOW_ANONYMOUS`: Allow anonymous access (default: false)
-- `APP_MOD_REWRITE`: Enable mod_rewrite URLs (default: false)
-- `APP_BASE_URL`: Base URL for mod_rewrite
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SMB_DEFAULT_SERVER` | Default SMB server hostname | `localhost` |
+| `SMB_SERVER_LIST` | Comma-separated list of allowed servers | *(empty)* |
+| `SMB_ROOT_PATH` | Root path to restrict navigation (e.g., `/server/share`) | *(empty)* |
+| `SMB_HIDE_DOT_FILES` | Hide files starting with dot | `true` |
+| `SMB_HIDE_SYSTEM_SHARES` | Hide system shares (C$, ADMIN$, IPC$) | `true` |
+| `SMB_HIDE_PRINTER_SHARES` | Hide printer shares | `false` |
 
-### Logging
-- `LOG_LEVEL`: Log verbosity (0-3)
-- `LOG_FACILITY`: Syslog facility
+### Application Settings
 
-## Features Comparison
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APP_DEFAULT_LANGUAGE` | Default UI language | `en` |
+| `APP_DEFAULT_CHARSET` | Character encoding | `UTF-8` |
+| `APP_CACHE_PATH` | Directory for temporary files | *(empty)* |
+| `APP_SESSION_NAME` | Custom session cookie name | `SMBWebClientID` |
+| `APP_ALLOW_ANONYMOUS` | Allow anonymous access | `false` |
+| `APP_MOD_REWRITE` | Enable clean URLs | `false` |
+| `APP_BASE_URL` | Base URL for clean URLs | *(empty)* |
 
-| Feature | Legacy Version | Modern Version |
-|---------|---------------|----------------|
-| PHP Version | PHP 4.1+ | PHP 8.2+ |
-| SMB Access | smbclient CLI | icewind/smb library |
-| Web Server | Apache/Nginx | FrankenPHP/Any |
-| Architecture | Procedural | OOP with PSR-4 |
-| Type Safety | None | Strict typing |
-| Performance | Moderate | High (FrankenPHP) |
-| Dependencies | None | Composer |
+### Other Settings
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ARCHIVER_TYPE` | Archive format for folder downloads | `zip` |
+| `LOG_LEVEL` | Logging verbosity (0-3) | `0` |
+| `LOG_FACILITY` | Syslog facility | `LOG_DAEMON` |
+
+## Supported Languages
+
+The application supports automatic language detection and includes translations for:
+
+`af`, `ar`, `az`, `bg`, `bs`, `ca`, `cs`, `da`, `de`, `el`, `en`, `eo`, `es`, `et`, `eu`, `fa`, `fi`, `fr`, `gl`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ko`, `ka`, `lt`, `lv`, `ms`, `nl`, `no`, `pl`, `pt`, `pt-br`, `ro`, `ru`, `sk`, `sl`, `sq`, `sr`, `sv`, `th`, `tr`, `uk`, `zh`, `zh-tw`
+
+## Available Themes
+
+- **Windows** - Classic Windows Explorer style
+- **macOS** - Apple Finder style  
+- **Ubuntu** - Nautilus file manager style
 
 ## Architecture
 
 ```
-src/
-├── Application.php     # Main application controller
-├── Config.php         # Configuration management
-├── SmbClient.php      # SMB operations wrapper
-├── Session.php        # Session and authentication
-└── Translator.php     # Multi-language support
-
-public/
-└── index.php          # Entry point
-
-.env                   # Configuration file
-Dockerfile             # FrankenPHP container
-Caddyfile             # FrankenPHP/Caddy config
+├── public/
+│   ├── index.php          # Application entry point
+│   └── assets/            # CSS, images
+├── src/
+│   ├── Application.php    # Main application controller
+│   ├── Config.php         # Configuration management
+│   ├── SmbClient.php      # SMB operations wrapper
+│   ├── Session.php        # Session and authentication
+│   └── Translator.php     # Multi-language support
+├── cache/                 # Temporary files (ZIP downloads)
+├── .env                   # Configuration file
+├── Caddyfile              # FrankenPHP/Caddy config
+├── Dockerfile             # FrankenPHP container
+└── docker-compose.yml     # Docker Compose setup
 ```
 
-## Usage
+## Docker Compose Services
 
-### Basic Navigation
-- Browse SMB shares and directories
-- Upload and download files
-- Create new folders
-- Delete files and folders
-- Rename files and folders
+The included `docker-compose.yml` provides:
 
-### Authentication
-The application supports two authentication modes:
-- Form-based authentication (default)
-- HTTP Basic authentication
+- **smbwebclient**: Main application on port 8080
+- **samba1**: Test Samba server with sample shares
+- **samba2**: Additional test Samba server
 
-### Multi-language
-Automatic language detection from browser or manual selection via `?lang=es` parameter.
+Test credentials for Samba servers: `user` / `pass`
 
 ## Development
 
-### Run in development mode:
 ```bash
+# Install dependencies
 composer install
+
+# Run development server
 php -S localhost:8080 -t public
+
+# Static analysis
+vendor/bin/phpstan analyse src
 ```
 
-### Code Standards
-The codebase follows:
+## Code Standards
+
 - PSR-4 autoloading
 - PSR-12 coding style
-- Strict typing
-- Modern PHP 8 features
-
-## Migration from Legacy Version
-
-The legacy `smbwebclient.php` file is preserved for reference. Key changes:
-
-1. **Object-Oriented**: Moved from procedural to OOP
-2. **Native SMB**: Using icewind/smb instead of CLI
-3. **Type Safety**: All methods and properties are strictly typed
-4. **Modern PHP**: Constructor property promotion, match expressions, etc.
-5. **Dependency Management**: Composer for all dependencies
-6. **Performance**: FrankenPHP for high-performance serving
+- Strict typing enabled
+- PHP 8.2+ features (constructor promotion, match expressions, named arguments)
 
 ## License
 
 GPL-2.0-or-later
 
-## Credits
+## Author
 
-Original author: Victor M. Varela <vmvarela@gmail.com>
-Modern rewrite: 2025
-
-## Contributing
-
-Contributions are welcome! Please ensure:
-- PHP 8.2+ compatibility
-- Strict typing enabled
-- PSR-12 coding standards
-- Updated documentation
+Victor M. Varela <vmvarela@gmail.com>
 
 ## Troubleshooting
 
-### SMB Connection Issues
-- Verify `SMB_DEFAULT_SERVER` is accessible
-- Check credentials are correct
-- Ensure libsmbclient is installed
+### Connection Issues
+- Verify `SMB_DEFAULT_SERVER` is accessible from the container/server
+- Check that credentials have appropriate permissions
+- Ensure libsmbclient and PHP smbclient extension are installed
 
 ### Permission Issues
-- Ensure cache directory is writable
-- Check SMB share permissions
+- Ensure the cache directory is writable
+- Check SMB share permissions for the authenticating user
 
-### Performance
+### Performance Tips
 - Use FrankenPHP for best performance
 - Enable OPcache in production
-- Consider using mod_rewrite for cleaner URLs
+- Consider using `SMB_ROOT_PATH` to limit browsing scope
