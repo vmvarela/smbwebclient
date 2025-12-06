@@ -1,0 +1,583 @@
+/* Mac Theme - Estilo macOS Big Sur / Monterey */
+
+/* --- Configuración Global y Tipografía --- */
+:root {
+    --font-stack: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --text-color: #ffffff;
+    --input-bg-light: rgba(255, 255, 255, 0.3);
+    --input-border-light: rgba(255, 255, 255, 0.5);
+    --blur-amount: 20px;
+    --bg-app-external: #1e1e1e;
+    --sidebar-bg: rgba(240, 240, 240, 0.7);
+    --main-content-bg: #ffffff;
+    --toolbar-bg: #f6f6f6;
+    --text-primary: #333333;
+    --text-secondary: #7d7d7d;
+    --accent-blue: #007aff;
+    --selection-gray: #e5e5e5;
+    --window-border-radius: 12px;
+}
+
+body {
+    font-family: var(--font-stack);
+    font-size: 100%;
+    margin: 0;
+    padding: 0;
+    background: #f5f5f7;
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    padding: 0;
+    font-size: 0.9rem;
+    background: var(--main-content-bg);
+    min-height: 100vh;
+}
+
+/* --- Login overlay style - Mac --- */
+.login-overlay {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%230A84FF;stop-opacity:1"/><stop offset="100%" style="stop-color:%2332D74B;stop-opacity:1"/></linearGradient></defs><rect width="1920" height="1080" fill="url(%23g)"/></svg>');
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(var(--blur-amount));
+    z-index: 0;
+}
+
+.login-window {
+    width: 380px;
+    background: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+.login-titlebar {
+    background: transparent;
+    color: var(--text-color);
+    padding: 0;
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 1.2rem;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.login-titlebar::before {
+    content: '';
+    display: block;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 15px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    background-image: url('https://cdn-icons-png.flaticon.com/512/149/149071.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.login-body {
+    padding: 0;
+    color: var(--text-color);
+}
+
+.login-instruction {
+    margin: 0 0 40px 0;
+    font-size: 1.2rem;
+    font-weight: 400;
+    color: var(--text-color);
+    text-align: center;
+    opacity: 0.9;
+    letter-spacing: normal;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.login-form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.login-form-row select {
+    flex: 1;
+}
+
+.login-form label {
+    display: none;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"],
+.login-form select {
+    width: 100%;
+    padding: 12px 15px;
+    box-sizing: border-box;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--input-bg-light);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--text-color);
+    font-size: 0.95rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.login-form input[type="text"]::placeholder,
+.login-form input[type="password"]::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus,
+.login-form select:focus,
+.login-form input[type="text"]:hover,
+.login-form input[type="password"]:hover,
+.login-form select:hover {
+    background: rgba(255, 255, 255, 0.4);
+    border-color: var(--input-border-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.login-form select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-13%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2013l131.3%20131.3c3.6%203.6%207.9%205.4%2013%205.4s9.3-1.8%2013-5.4L292.4%2095.2a17.6%2017.6%200%200%200%200-13z%22%2F%3E%3C%2Fsvg%3E');
+    background-repeat: no-repeat;
+    background-position: right 15px top 50%;
+    background-size: 12px auto;
+    padding-right: 35px;
+}
+
+.login-form select option {
+    background-color: #333;
+    color: white;
+}
+
+.login-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 25px;
+}
+
+.login-actions input[type="submit"] {
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 0;
+    width: 50px;
+    height: 50px;
+    font-size: 0;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.3s;
+    backdrop-filter: blur(5px);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 24px;
+}
+
+.login-actions input[type="submit"]:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    border-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Password toggle eye icon */
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+
+/* --- Finder Window Style for File Listing --- */
+
+/* Toolbar */
+.toolbar {
+    margin-bottom: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.toolbar form.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+.toolbar button {
+    border: 1px solid var(--accent-blue);
+    background: var(--accent-blue);
+    color: #fff;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 400;
+}
+
+.toolbar button:hover {
+    background: #0051d5;
+    border-color: #0051d5;
+}
+
+.toolbar input[type="text"],
+.toolbar input[type="file"] {
+    font-size: 0.8rem;
+    background: #fff;
+    color: var(--text-primary);
+    border: 1px solid #d1d1d6;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.toolbar a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+
+.toolbar a:hover {
+    color: #0051d5;
+    background-color: transparent;
+    text-decoration: underline;
+}
+
+.toolbar-link {
+    color: var(--accent-blue) !important;
+    text-decoration: none !important;
+}
+
+.toolbar-link:hover {
+    color: #0051d5 !important;
+    background-color: transparent !important;
+    text-decoration: underline !important;
+}
+
+.toolbar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.breadcrumb-toolbar-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 8px 12px;
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    margin: 0;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+}
+
+.breadcrumb a {
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+}
+
+.breadcrumb a:hover {
+    color: var(--text-primary) !important;
+    background-color: transparent !important;
+    text-decoration: underline !important;
+}
+
+/* Dropzone */
+.dropzone {
+    border: 2px dashed #d1d1d6;
+    border-radius: 8px;
+    padding: 20px;
+    background: #fafafa;
+    margin: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dropzone.drag-over {
+    border-color: var(--accent-blue);
+    background: #f0f6fc;
+    box-shadow: 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+.dropzone-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Table */
+table.listing {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--main-content-bg);
+    border: none;
+    font-size: 0.85rem;
+}
+
+table.listing th,
+table.listing td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: inherit;
+}
+
+table.listing td:first-child {
+    padding-right: 8px;
+    width: 30px;
+}
+
+table.listing td:nth-child(2) {
+    padding-left: 0px;
+    padding-right: 8px;
+    width: 24px;
+}
+
+table.listing td:nth-child(3) {
+    padding-left: 0px;
+}
+
+table.listing input[type="checkbox"] {
+    margin: 0;
+    vertical-align: middle;
+    width: 16px;
+    height: 16px;
+}
+
+table.listing th {
+    background: var(--toolbar-bg);
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+table.listing tr:hover {
+    background: var(--selection-gray);
+}
+
+table.listing tr:nth-child(even) {
+    background: transparent;
+}
+
+/* Links */
+a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+
+a:hover {
+    color: #0051d5;
+    background-color: transparent;
+    text-decoration: underline;
+}
+
+a.sort-link {
+    display: inline-block;
+    width: 100%;
+    color: var(--text-primary);
+}
+
+a.sort-link:hover {
+    background-color: transparent;
+    text-decoration: none;
+}
+
+/* Error and success messages */
+.notification-error {
+    background: #fff5f5;
+    border: 1px solid #ff3b30;
+    color: #c41a16;
+    padding: 12px;
+    margin: 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.notification-success {
+    background: #f0fdf4;
+    border: 1px solid #34c759;
+    color: #15803d;
+    padding: 12px;
+    margin: 12px;
+    border-radius: 8px;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--main-content-bg);
+    padding: 24px;
+    border-radius: var(--window-border-radius);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px;
+    color: var(--text-primary);
+    border: 1px solid #e0e0e0;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.modal-content p {
+    margin: 10px 0 5px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.modal-content input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 0.85rem;
+    background: #fff;
+    color: var(--text-primary);
+}
+
+.modal-content input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+}
+
+.modal-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-actions button {
+    padding: 8px 16px;
+    border: 1px solid #d1d1d6;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+.modal-actions button.btn-cancel {
+    background: #fff;
+    color: var(--text-primary);
+    border: 1px solid #d1d1d6;
+}
+
+.modal-actions button.btn-cancel:hover {
+    background: #f5f5f7;
+}
+
+.modal-actions button.btn-primary {
+    border: 1px solid var(--accent-blue);
+    background: var(--accent-blue);
+    color: #fff;
+}
+
+.modal-actions button.btn-primary:hover {
+    background: #0051d5;
+    border-color: #0051d5;
+}
+
+.modal-actions button.btn-delete {
+    border: 1px solid #ff3b30;
+    background: #ff3b30;
+    color: #fff;
+}
+
+.modal-actions button.btn-delete:hover {
+    background: #d70015;
+    border-color: #d70015;
+}
+
+.modal-content h3.warning {
+    color: #ff3b30;
+}
+
+/* Hidden form */
+.hidden-form {
+    display: none;
+}
+
+/* Upload form hidden by default */
+.upload-form-hidden {
+    display: none;
+}
