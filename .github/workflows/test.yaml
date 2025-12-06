@@ -1,0 +1,17 @@
+name: Docker CI
+
+on:
+  schedule:
+    - cron: '30 4 * * *'
+  pull_request:
+    paths:
+    - Dockerfile
+    - packages.txt
+
+jobs:
+  test:
+    name: Test Docker Image
+    uses: ./.github/workflows/docker-build-publish.yaml
+    with:
+      image: 'smbwebclient'
+    secrets: inherit
