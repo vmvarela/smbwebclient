@@ -18,7 +18,7 @@ env:
 jobs:
   build:
     name: ${{ github.event_name == 'pull_request' && 'Build' || 'Build+Push' }}
-    runs-on: ${{ vars.CI_GITHUB_RUNNER }}
+    runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: write
