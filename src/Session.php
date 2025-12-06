@@ -96,6 +96,16 @@ class Session
         return $_SESSION['swcLanguage'] ?? null;
     }
 
+    public function setTheme(string $theme): void
+    {
+        $_SESSION['swcTheme'] = $theme;
+    }
+
+    public function getTheme(): ?string
+    {
+        return $_SESSION['swcTheme'] ?? null;
+    }
+
     public function destroy(): void
     {
         session_destroy();

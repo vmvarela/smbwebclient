@@ -18,14 +18,13 @@ services:
       - NETBIOSNAME=samba1
     volumes:
       - ./smb-share1:/share
+      - ./smb1.conf:/etc/samba/smb.conf
     expose:
       - "139"
       - "445"
     command:
       - -u
       - "user;pass"
-      - -s
-      - "SHARE1;/share;yes;no;yes"
       - -p
 
   samba2:
@@ -36,12 +35,11 @@ services:
       - NETBIOSNAME=samba2
     volumes:
       - ./smb-share2:/share
+      - ./smb2.conf:/etc/samba/smb.conf
     expose:
       - "139"
       - "445"
     command:
       - -u
       - "user;pass"
-      - -s
-      - "SHARE2;/share;yes;no;yes"
       - -p

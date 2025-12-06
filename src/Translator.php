@@ -30,6 +30,7 @@ class Translator
             'Contraseña',
             'Idioma',
             'Conectar',
+            'Tema',
         ],
         'en' => [
             'Windows Network',
@@ -54,6 +55,7 @@ class Translator
             'Password',
             'Language',
             'Connect',
+            'Theme',
         ],
         'fr' => [
             'Réseau Windows',
@@ -78,6 +80,7 @@ class Translator
             'Mot de passe',
             'Langue',
             'Connecter',
+            'Thème',
         ],
     ];
 
@@ -118,5 +121,14 @@ class Translator
     public function getLanguage(): string
     {
         return $this->language;
+    }
+
+    public function getAvailableLanguages(): array
+    {
+        return [
+            'es' => 'Español',
+            'en' => 'English',
+            'fr' => 'Français'
+        ];
     }
 }

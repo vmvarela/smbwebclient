@@ -13,6 +13,7 @@ class Application
     private array $pathParts = [];
     private string $sortBy = 'name';
     private string $sortDir = 'asc';
+    private string $theme = 'default';
 
     public function __construct(
         private readonly Config $config,
@@ -31,6 +32,20 @@ class Application
         }
         
         $this->translator = new Translator($language);
+        
+        // Resolver tema: primero sesión, luego GET, luego default
+        $sessionTheme = $this->session->getTheme();
+        if ($sessionTheme) {
+            $this->theme = $sessionTheme;
+        } else {
+            $this->theme = $_GET['theme'] ?? 'default';
+        }
+        
+        // Validar tema
+        $validThemes = array_keys($this->getThemeNames());
+        if (!in_array($this->theme, $validThemes)) {
+            $this->theme = 'default';
+        }
         
         $credentials = $this->session->getCredentials();
         $this->smbClient = new SmbClient(
@@ -102,6 +117,7 @@ class Application
             $username = $_POST['swcUser'] ?? '';
             $password = $_POST['swcPw'] ?? '';
             $language = $_POST['swcLang'] ?? 'es';
+            $theme = $_POST['swcTheme'] ?? 'default';
             
             // Validate language
             $validLangs = array_keys($this->getLanguageNames());
@@ -109,8 +125,15 @@ class Application
                 $language = 'es';
             }
             
+            // Validate theme
+            $validThemes = array_keys($this->getThemeNames());
+            if (!in_array($theme, $validThemes)) {
+                $theme = 'default';
+            }
+            
             $this->session->setCredentials($username, $password);
             $this->session->setLanguage($language);
+            $this->session->setTheme($theme);
             $this->smbClient->setCredentials($username, $password);
             
             // Test credentials by trying to list shares on default server
@@ -130,9 +153,23 @@ class Application
 
     private function handleLogout(): void
     {
+        // Preserve language and theme before destroying session
+        $language = $this->session->getLanguage();
+        $theme = $this->session->getTheme();
+        
         $this->session->clearCredentials();
         $this->session->destroy();
-        header('Location: ' . $this->getUrl());
+        
+        // Redirect with preserved language and theme
+        $params = [];
+        if ($language) {
+            $params['lang'] = $language;
+        }
+        if ($theme) {
+            $params['theme'] = $theme;
+        }
+        
+        header('Location: ' . $this->getUrl('', $params));
         exit;
     }
 
@@ -280,6 +317,8 @@ class Application
             } else {
                 $itemPath = rtrim($remotePath, '/') . '/' . $item;
             }
+            
+            error_log("Attempting to delete: server=$serverName, share=$shareName, path=$itemPath");
             
             $deleted = false;
             
@@ -455,10 +494,16 @@ class Application
 
     private function getLanguageNames(): array
     {
+        return $this->translator->getAvailableLanguages();
+    }
+
+    private function getThemeNames(): array
+    {
         return [
-            'es' => 'Español',
-            'en' => 'English',
-            'fr' => 'Français'
+            'default' => 'Light',
+            'dark' => 'Dark',
+            'windows' => 'Windows',
+            'mac' => 'Mac'
         ];
     }
 
@@ -467,8 +512,24 @@ class Application
         $langs = $this->getLanguageNames();
         $current = $this->translator->getLanguage();
         $currentPath = htmlspecialchars($this->currentPath);
-        $html = '<select name="swcLang" id="swcLang" onchange="window.location.href=\'?path=' . $currentPath . '&lang=\'+this.value" style="width: 100%; padding: 8px; border: 1px solid #c5d1ea; border-radius: 3px; font-size: 0.85rem; box-sizing: border-box; background: #fff;">';
+        $currentTheme = htmlspecialchars($this->theme);
+        $html = '<select name="swcLang" id="swcLang" onchange="window.location.href=\'?path=' . $currentPath . '&lang=\'+this.value+\'&theme=' . $currentTheme . '\'">';
         foreach ($langs as $code => $label) {
+            $selected = $code === $current ? ' selected' : '';
+            $html .= '<option value="' . $code . '"' . $selected . '>' . htmlspecialchars($label) . '</option>';
+        }
+        $html .= '</select>';
+        return $html;
+    }
+
+    private function renderThemeSelectorCombo(): string
+    {
+        $themes = $this->getThemeNames();
+        $current = $this->theme;
+        $currentPath = htmlspecialchars($this->currentPath);
+        $currentLang = htmlspecialchars($this->translator->getLanguage());
+        $html = '<select name="swcTheme" id="swcTheme" onchange="window.location.href=\'?path=' . $currentPath . '&lang=' . $currentLang . '&theme=\'+this.value">';
+        foreach ($themes as $code => $label) {
             $selected = $code === $current ? ' selected' : '';
             $html .= '<option value="' . $code . '"' . $selected . '>' . htmlspecialchars($label) . '</option>';
         }
@@ -481,11 +542,11 @@ class Application
         $servers = $this->smbClient->discoverServers();
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         // Breadcrumb + toolbar en una línea
-        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🚪 ' . $this->translator->translate(17) . '</a>' .
+        $toolbar = '<div class="toolbar-container">' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
             '</div>';
-        
-        $html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+
+        $html = '<div class="breadcrumb-toolbar-wrapper">' .
             '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
             $toolbar .
             '</div>';
@@ -506,11 +567,11 @@ class Application
     {
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         // Breadcrumb + toolbar en una línea
-        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem.">🚪 ' . $this->translator->translate(17) . '</a>' .
+        $toolbar = '<div class="toolbar-container">' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
             '</div>';
-        
-        $html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+
+        $html = '<div class="breadcrumb-toolbar-wrapper">' .
             '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
             $toolbar .
             '</div>';
@@ -534,19 +595,19 @@ class Application
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         
         // Form oculto para upload
-        $html = '<form id="uploadForm" class="inline" method="post" action="' . $action . '" enctype="multipart/form-data" style="display: none;">' .
+        $html = '<form id="uploadForm" class="inline upload-form-hidden" method="post" action="' . $action . '" enctype="multipart/form-data">' .
             '<input type="hidden" name="action" value="upload" />' .
             '<input type="file" name="file" multiple accept="*/*" />' .
             '</form>';
         
         // Breadcrumb + toolbar en una línea
-        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
-            '<a href="#" id="newFolderBtn" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">📁 ' . $this->translator->translate(15) . '</a>' .
-            '<a href="#" id="deleteSelectedBtn" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🗑️ ' . $this->translator->translate(8) . '</a>' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🚪 ' . $this->translator->translate(17) . '</a>' .
+        $toolbar = '<div class="toolbar-container">' .
+            '<a href="#" id="newFolderBtn" class="toolbar-link">📁 ' . $this->translator->translate(15) . '</a>' .
+            '<a href="#" id="deleteSelectedBtn" class="toolbar-link">🗑️ ' . $this->translator->translate(8) . '</a>' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
             '</div>';
-        
-        $html .= '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+
+        $html .= '<div class="breadcrumb-toolbar-wrapper">' .
             '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
             $toolbar .
             '</div>';
@@ -554,7 +615,7 @@ class Application
         if (count($items) > 0) {
             $html .= '<form method="post" action="' . $action . '">';
             $html .= '<input type="hidden" name="action" value="delete" />';
-            $html .= '<table class="listing"><tr><th><input type="checkbox" id="selectAll" style="margin: 0; vertical-align: middle;" /></th><th></th>';
+            $html .= '<table class="listing"><tr><th><input type="checkbox" id="selectAll" /></th><th></th>';
             $html .= $this->renderSortHeader(1, 'name');
             $html .= $this->renderSortHeader(2, 'size');
             $html .= $this->renderSortHeader(4, 'modified');
@@ -562,11 +623,12 @@ class Application
             $html .= '<th></th></tr>';
             
             foreach ($items as $item) {
-                $name = htmlspecialchars($item->getName());
+                $itemName = $item->getName();
+                $name = htmlspecialchars($itemName);
                 $size = $item->isDirectory() ? '' : $this->formatSize($item->getSize());
                 $dateFormat = $this->translator->translate(6);
                 $modified = date($dateFormat, $item->getMTime());
-                $path = $this->currentPath . '/' . $item->getName();
+                $path = $this->currentPath . '/' . $itemName;
                 $url = $item->isDirectory()
                     ? $this->getUrl($path)
                     : $this->getUrl($path, ['download' => '1']);
@@ -575,11 +637,12 @@ class Application
                 if ($item->isDirectory()) {
                     $typeLabel = $this->translator->translate(11); // "Carpeta"
                 } else {
-                    $ext = strtoupper(pathinfo($name, PATHINFO_EXTENSION));
+                    $ext = strtoupper(pathinfo($itemName, PATHINFO_EXTENSION));
                     $typeLabel = $ext ? $this->translator->translate(12, $ext) : '';
                 }
                 
-                $checkbox = '<input type="checkbox" name="items[]" value="' . $name . '" />';
+                $checkboxValue = htmlspecialchars($itemName);
+                $checkbox = '<input type="checkbox" name="items[]" value="' . $checkboxValue . '" />';
                 $icon = $this->getIcon($item);
 
                 $html .= "<tr><td>{$checkbox}</td><td>{$icon}</td><td><a href=\"{$url}\">{$name}</a></td><td>{$size}</td><td>{$modified}</td><td>{$typeLabel}</td><td></td></tr>";
@@ -639,8 +702,7 @@ class Application
     private function renderBreadcrumb(): string
     {
         $rootLabel = $this->translator->translate(0);
-        $linkStyle = 'color: inherit; text-decoration: none;';
-        $rootLink = '<a href="' . $this->getUrl('') . '" style="' . $linkStyle . '">' . $rootLabel . '</a>';
+        $rootLink = '<a href="' . $this->getUrl('') . '">' . $rootLabel . '</a>';
         
         if (empty($this->pathParts)) {
             return $rootLabel;
@@ -651,7 +713,7 @@ class Application
         foreach ($this->pathParts as $part) {
             $accum[] = $part;
             $path = implode('/', $accum);
-            $parts[] = '<a href="' . $this->getUrl($path) . '" style="' . $linkStyle . '">' . htmlspecialchars($part) . '</a>';
+            $parts[] = '<a href="' . $this->getUrl($path) . '">' . htmlspecialchars($part) . '</a>';
         }
 
         return $rootLink . ' > ' . implode(' > ', $parts);
@@ -664,13 +726,15 @@ class Application
         $errorHtml = '';
         if ($errorMessage) {
             $errorMessage = htmlspecialchars($errorMessage);
-            $errorHtml = "<div style=\"background: #ffe0e0; border: 1px solid #ff6b6b; color: #cc0000; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 0.85rem;\"><strong>Error:</strong> {$errorMessage}</div>";
+            $errorHtml = "<div class=\"notification-error\"><strong>Error:</strong> {$errorMessage}</div>";
         }
         $langSelector = $this->renderLanguageSelectorCombo();
+        $themeSelector = $this->renderThemeSelectorCombo();
         $labelUser = $this->translator->translate(18);
         $labelPassword = $this->translator->translate(19);
         $labelLanguage = $this->translator->translate(20);
         $labelSubmit = $this->translator->translate(21);
+        $labelTheme = $this->translator->translate(22);
         $content = <<<HTML
         <div class="login-overlay">
             <div class="login-window">
@@ -678,12 +742,12 @@ class Application
                 <div class="login-body">
                     {$errorHtml}
                     <form method="post" action="{$action}" class="login-form">
-                        <label>{$labelUser}</label>
-                        <input type="text" name="swcUser" autocomplete="username" />
-                        <label>{$labelPassword}</label>
-                        <input type="password" name="swcPw" autocomplete="current-password" />
-                        <label>{$labelLanguage}</label>
-                        {$langSelector}
+                        <input type="text" name="swcUser" placeholder="{$labelUser}" autocomplete="username" />
+                        <input type="password" name="swcPw" placeholder="{$labelPassword}" autocomplete="current-password" />
+                        <div class="login-form-row">
+                            {$langSelector}
+                            {$themeSelector}
+                        </div>
                         <div class="login-actions">
                             <input type="submit" name="swcSubmit" value="{$labelSubmit}" />
                         </div>
@@ -704,17 +768,18 @@ class Application
 
         if ($errorMessage) {
             $errorMessage = htmlspecialchars($errorMessage);
-            $notification = "<div style=\"background: #ffe0e0; border: 1px solid #ff6b6b; color: #cc0000; padding: 8px; margin-bottom: 10px; border-radius: 4px;\"><strong>Error:</strong><br />{$errorMessage}</div>";
+            $notification = "<div class=\"notification-error\"><strong>Error:</strong><br />{$errorMessage}</div>";
         }
 
         if ($successMessage) {
             $successMessage = htmlspecialchars($successMessage);
-            $notification = "<div style=\"background: #e0ffe0; border: 1px solid #6bff6b; color: #00cc00; padding: 8px; margin-bottom: 10px; border-radius: 4px;\"><strong>Success:</strong><br />{$successMessage}</div>";
+            $notification = "<div class=\"notification-success\"><strong>Success:</strong><br />{$successMessage}</div>";
         }
 
         $content = $notification . $content;
 
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
+        $cssFile = '/assets/css/' . $this->theme . '.css';
 
         return <<<HTML
         <!DOCTYPE html>
@@ -722,51 +787,9 @@ class Application
         <head>
             <meta charset="{$this->config->defaultCharset}">
             <title>{$title}</title>
-            <style>
-                body { font-family: Tahoma, Arial, sans-serif; font-size: 100%; margin: 0; padding: 0; background: #f6f6f6; }
-                .container { padding: 14px; font-size: 0.85rem; }
-                /* Login modal style */
-                .login-overlay { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #e6ebf5, #f7f9fc); }
-                .login-window { width: 320px; background: #f4f7fb; border: 1px solid #c5d1ea; border-radius: 6px; box-shadow: 0 8px 18px rgba(0,0,0,0.15); overflow: hidden; }
-                .login-titlebar { background: #4a6ea9; color: #fff; padding: 10px; font-weight: bold; font-size: 0.9rem; letter-spacing: 0.3px; }
-                .login-body { padding: 14px 16px 18px; color: #333; }
-                .login-instruction { margin: 0 0 12px; font-size: 0.85rem; color: #555; }
-                .login-form { display: flex; flex-direction: column; gap: 8px; }
-                .login-form label { font-weight: bold; font-size: 0.85rem; color: #2f4f8a; }
-                .login-form input[type="text"], .login-form input[type="password"] { width: 100%; padding: 8px; border: 1px solid #c5d1ea; border-radius: 3px; font-size: 0.85rem; box-sizing: border-box; background: #fff; }
-                .login-form input[type="text"]:focus, .login-form input[type="password"]:focus { outline: none; border-color: #4a6ea9; box-shadow: 0 0 0 2px rgba(74,110,169,0.15); }
-                .login-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
-                .login-actions input[type="submit"] { border: 1px solid #3b5c9a; background: #4a6ea9; color: #fff; padding: 6px 14px; font-size: 0.85rem; cursor: pointer; border-radius: 3px; }
-                .login-actions input[type="submit"]:hover { background: #3b5c9a; }
-                .toolbar { margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
-                .toolbar form.inline { display: inline-flex; align-items: center; gap: 6px; background: #e9eef7; border: 1px solid #c5d1ea; padding: 6px 8px; border-radius: 4px; }
-                .toolbar button { border: 1px solid #3b5c9a; background: #4a6ea9; color: #fff; padding: 4px 8px; font-size: 10px; cursor: pointer; border-radius: 3px; }
-                .toolbar input[type="text"], .toolbar input[type="file"] { font-size: 10px; }
-                .breadcrumb { margin: 6px 0 10px; font-size: 10px; color: #555; }
-                .dropzone { border: 2px dashed #c5d1ea; border-radius: 4px; padding: 20px; background: #f8f9fc; margin-bottom: 10px; text-align: center; cursor: pointer; transition: all 0.3s; }
-                .dropzone.drag-over { border-color: #4a6ea9; background: #e3e9f5; box-shadow: 0 0 6px rgba(74, 110, 169, 0.3); }
-                .dropzone-text { color: #666; font-size: 0.85rem; }
-                table.listing { border-collapse: collapse; width: 100%; background: #fff; border: 1px solid #c5d1ea; font-size: 0.85rem; }
-                table.listing th, table.listing td { padding: 4px 4px; text-align: left; border-bottom: 1px solid #e1e6f0; font-size: inherit; }
-                table.listing td:first-child { padding-right: 0px; width: 20px; }
-                table.listing td:nth-child(2) { padding-left: 0px; padding-right: 2px; width: 20px; }
-                table.listing td:nth-child(3) { padding-left: 2px; }
-                table.listing input[type="checkbox"] { margin: 0; vertical-align: middle; }
-                table.listing th { background: #e3e9f5; color: #2f4f8a; }
-                table.listing tr:nth-child(even) { background: #f8f9fc; }
-                a { color: #1a4f9c; text-decoration: none; }
-                a:hover { color: #fff; background-color: #1a4f9c; }
-                a.sort-link { display: inline-block; width: 100%; }
-                .toolbar a { color: #666; }
-                .toolbar a:hover { color: #666; background-color: transparent; text-decoration: underline; }
-                .toolbar-link { color: #666 !important; text-decoration: none !important; }
-                .toolbar-link:hover { color: #666 !important; background-color: transparent !important; text-decoration: none !important; }
-                .breadcrumb a { color: inherit !important; text-decoration: none !important; }
-                .breadcrumb a:hover { color: inherit !important; background-color: transparent !important; text-decoration: none !important; }
-                .lang-selector a { color: #fff !important; font-weight: normal; text-decoration: underline; }
-                .lang-selector b { color: #ffd700 !important; font-weight: bold; }
-            </style>
+            <link rel="stylesheet" href="{$cssFile}">
         </head>
+        <body>
         <body>
             <div class="container">
                 {$content}
@@ -859,49 +882,49 @@ class Application
             </script>
 
             <!-- Modal para crear carpeta -->
-            <div id="folderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; display: none; justify-content: center; align-items: center;">
-                <div style="background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); width: 90%; max-width: 400px;">
-                    <h3 style="margin-top: 0;">Nueva carpeta</h3>
-                    <p style="margin: 10px 0 5px 0; font-size: 0.85rem;">Nombre de la carpeta:</p>
-                    <input type="text" id="folderNameInput" placeholder="Nombre" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; font-size: 0.85rem;" />
-                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                        <button id="cancelFolderBtn" type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 3px; font-size: 0.85rem;">Cancelar</button>
-                        <button id="createFolderBtn" type="button" style="padding: 6px 12px; border: 1px solid #3b5c9a; background: #4a6ea9; color: #fff; cursor: pointer; border-radius: 3px; font-size: 0.85rem;">Crear</button>
+            <div id="folderModal" class="modal-overlay">
+                <div class="modal-content">
+                    <h3>Nueva carpeta</h3>
+                    <p>Nombre de la carpeta:</p>
+                    <input type="text" id="folderNameInput" placeholder="Nombre" />
+                    <div class="modal-actions">
+                        <button id="cancelFolderBtn" type="button" class="btn-cancel">Cancelar</button>
+                        <button id="createFolderBtn" type="button" class="btn-primary">Crear</button>
                     </div>
                 </div>
             </div>
 
             <!-- Formulario oculto para crear carpeta -->
-            <form id="createFolderForm" method="post" style="display: none;">
+            <form id="createFolderForm" method="post" class="hidden-form">
                 <input type="hidden" name="action" value="mkdir" />
                 <input type="hidden" name="dirname" id="dirnameInput" />
             </form>
 
             <!-- Modal para confirmar borrado -->
-            <div id="deleteConfirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-                <div style="background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); width: 90%; max-width: 500px;">
-                    <h3 style="margin-top: 0; color: #cc0000;">Confirmar borrado</h3>
-                    <p id="deleteConfirmMessage" style="margin: 10px 0; font-size: 0.85rem;"></p>
-                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                        <button id="cancelDeleteBtn" type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 3px; font-size: 0.85rem;">Cancelar</button>
-                        <button id="confirmDeleteBtn" type="button" style="padding: 6px 12px; border: 1px solid #cc0000; background: #ff6b6b; color: #fff; cursor: pointer; border-radius: 3px; font-size: 0.85rem;">Borrar</button>
+            <div id="deleteConfirmModal" class="modal-overlay">
+                <div class="modal-content" style="max-width: 500px;">
+                    <h3 class="warning">Confirmar borrado</h3>
+                    <p id="deleteConfirmMessage"></p>
+                    <div class="modal-actions">
+                        <button id="cancelDeleteBtn" type="button" class="btn-cancel">Cancelar</button>
+                        <button id="confirmDeleteBtn" type="button" class="btn-delete">Borrar</button>
                     </div>
                 </div>
             </div>
 
             <!-- Modal para avisar que no hay selección -->
-            <div id="noSelectionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center;">
-                <div style="background: #fff; padding: 20px; border-radius: 4px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); width: 90%; max-width: 400px;">
-                    <h3 style="margin-top: 0; color: #cc0000;">Aviso</h3>
-                    <p id="noSelectionMessage" style="margin: 10px 0; font-size: 0.85rem;">Por favor, selecciona al menos un elemento.</p>
-                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
-                        <button id="closeNoSelectionBtn" type="button" style="padding: 6px 12px; border: 1px solid #ccc; background: #f0f0f0; cursor: pointer; border-radius: 3px; font-size: 0.85rem;">Cerrar</button>
+            <div id="noSelectionModal" class="modal-overlay">
+                <div class="modal-content">
+                    <h3 class="warning">Aviso</h3>
+                    <p id="noSelectionMessage">Por favor, selecciona al menos un elemento.</p>
+                    <div class="modal-actions">
+                        <button id="closeNoSelectionBtn" type="button" class="btn-cancel">Cerrar</button>
                     </div>
                 </div>
             </div>
 
             <!-- Formulario oculto para borrado -->
-            <form id="deleteConfirmForm" method="post" style="display: none;">
+            <form id="deleteConfirmForm" method="post" class="hidden-form">
                 <input type="hidden" name="action" value="delete" />
             </form>
 

@@ -5,3 +5,8 @@ composer.lock
 *.log
 .DS_Store
 /cache/
+/smb-share1/
+/smb-share2/
+*.html
+REFACTORING.md
+/.act/
