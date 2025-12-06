@@ -13,7 +13,7 @@ class Application
     private array $pathParts = [];
     private string $sortBy = 'name';
     private string $sortDir = 'asc';
-    private string $theme = 'default';
+    private string $theme = 'windows';
 
     public function __construct(
         private readonly Config $config,
@@ -38,13 +38,13 @@ class Application
         if ($sessionTheme) {
             $this->theme = $sessionTheme;
         } else {
-            $this->theme = $_GET['theme'] ?? 'default';
+            $this->theme = $_GET['theme'] ?? 'windows';
         }
         
         // Validar tema
         $validThemes = array_keys($this->getThemeNames());
         if (!in_array($this->theme, $validThemes)) {
-            $this->theme = 'default';
+            $this->theme = 'windows';
         }
         
         $credentials = $this->session->getCredentials();
@@ -500,10 +500,9 @@ class Application
     private function getThemeNames(): array
     {
         return [
-            'default' => 'Light',
-            'dark' => 'Dark',
             'windows' => 'Windows',
-            'mac' => 'Mac'
+            'mac' => 'Mac',
+            'ubuntu' => 'Ubuntu'
         ];
     }
 
@@ -653,7 +652,7 @@ class Application
         }
 
         // Dropzone al final
-        $html .= '<div id="dropzone" class="dropzone"><div class="dropzone-text">📂 Arrastra archivos aquí para subir o haz clic</div></div>';
+        $html .= '<div id="dropzone" class="dropzone"><div class="dropzone-text">📂 ' . $this->translator->translate(23) . '</div></div>';
         
         // Agregar atributo data con la URL de acción para el JavaScript
         $html .= '<script>window.createFolderAction = "' . $actionEscaped . '";</script>';
@@ -743,7 +742,15 @@ class Application
                     {$errorHtml}
                     <form method="post" action="{$action}" class="login-form">
                         <input type="text" name="swcUser" placeholder="{$labelUser}" autocomplete="username" />
-                        <input type="password" name="swcPw" placeholder="{$labelPassword}" autocomplete="current-password" />
+                        <div class="password-wrapper">
+                            <input type="password" id="swcPw" name="swcPw" placeholder="{$labelPassword}" autocomplete="current-password" />
+                            <span class="password-toggle" onclick="togglePassword()">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path id="eye-icon" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </span>
+                        </div>
                         <div class="login-form-row">
                             {$langSelector}
                             {$themeSelector}
@@ -755,6 +762,19 @@ class Application
                 </div>
             </div>
         </div>
+        <script>
+        function togglePassword() {
+            const pwField = document.getElementById('swcPw');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (pwField.type === 'password') {
+                pwField.type = 'text';
+                eyeIcon.setAttribute('d', 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24');
+            } else {
+                pwField.type = 'password';
+                eyeIcon.setAttribute('d', 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z');
+            }
+        }
+        </script>
         HTML;
 
         echo $this->renderPage('Login - SMB Web Client', $content);
@@ -781,12 +801,27 @@ class Application
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         $cssFile = '/assets/css/' . $this->theme . '.css';
 
+        // Traducciones para el HTML
+        $i18nCreateFolder = htmlspecialchars($this->translator->translate(15));
+        $i18nFolderNameLabel = htmlspecialchars($this->translator->translate(32));
+        $i18nFolderNamePlaceholder = htmlspecialchars($this->translator->translate(1));
+        $i18nCancel = htmlspecialchars($this->translator->translate(29));
+        $i18nCreate = htmlspecialchars($this->translator->translate(30));
+        $i18nConfirmDelete = htmlspecialchars($this->translator->translate(27));
+        $i18nDelete = htmlspecialchars($this->translator->translate(31));
+        $i18nWarning = htmlspecialchars($this->translator->translate(24));
+        $i18nSelectAtLeastOne = htmlspecialchars($this->translator->translate(25));
+        $i18nClose = htmlspecialchars($this->translator->translate(26));
+        $i18nConfirmDeleteMessage = addslashes($this->translator->translate(28, "%s"));
+        $i18nPleaseEnterFolderName = addslashes($this->translator->translate(33));
+
         return <<<HTML
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="{$this->config->defaultCharset}">
             <title>{$title}</title>
+            <link rel="icon" type="image/svg+xml" href="/assets/images/favicon.svg">
             <link rel="stylesheet" href="{$cssFile}">
         </head>
         <body>
@@ -884,12 +919,12 @@ class Application
             <!-- Modal para crear carpeta -->
             <div id="folderModal" class="modal-overlay">
                 <div class="modal-content">
-                    <h3>Nueva carpeta</h3>
-                    <p>Nombre de la carpeta:</p>
-                    <input type="text" id="folderNameInput" placeholder="Nombre" />
+                    <h3>{$i18nCreateFolder}</h3>
+                    <p>{$i18nFolderNameLabel}</p>
+                    <input type="text" id="folderNameInput" placeholder="{$i18nFolderNamePlaceholder}" />
                     <div class="modal-actions">
-                        <button id="cancelFolderBtn" type="button" class="btn-cancel">Cancelar</button>
-                        <button id="createFolderBtn" type="button" class="btn-primary">Crear</button>
+                        <button id="cancelFolderBtn" type="button" class="btn-cancel">{$i18nCancel}</button>
+                        <button id="createFolderBtn" type="button" class="btn-primary">{$i18nCreate}</button>
                     </div>
                 </div>
             </div>
@@ -903,11 +938,11 @@ class Application
             <!-- Modal para confirmar borrado -->
             <div id="deleteConfirmModal" class="modal-overlay">
                 <div class="modal-content" style="max-width: 500px;">
-                    <h3 class="warning">Confirmar borrado</h3>
+                    <h3 class="warning">{$i18nConfirmDelete}</h3>
                     <p id="deleteConfirmMessage"></p>
                     <div class="modal-actions">
-                        <button id="cancelDeleteBtn" type="button" class="btn-cancel">Cancelar</button>
-                        <button id="confirmDeleteBtn" type="button" class="btn-delete">Borrar</button>
+                        <button id="cancelDeleteBtn" type="button" class="btn-cancel">{$i18nCancel}</button>
+                        <button id="confirmDeleteBtn" type="button" class="btn-delete">{$i18nDelete}</button>
                     </div>
                 </div>
             </div>
@@ -915,10 +950,10 @@ class Application
             <!-- Modal para avisar que no hay selección -->
             <div id="noSelectionModal" class="modal-overlay">
                 <div class="modal-content">
-                    <h3 class="warning">Aviso</h3>
-                    <p id="noSelectionMessage">Por favor, selecciona al menos un elemento.</p>
+                    <h3 class="warning">{$i18nWarning}</h3>
+                    <p id="noSelectionMessage">{$i18nSelectAtLeastOne}</p>
                     <div class="modal-actions">
-                        <button id="closeNoSelectionBtn" type="button" class="btn-cancel">Cerrar</button>
+                        <button id="closeNoSelectionBtn" type="button" class="btn-cancel">{$i18nClose}</button>
                     </div>
                 </div>
             </div>
@@ -929,6 +964,12 @@ class Application
             </form>
 
             <script>
+                // Traducciones
+                const i18n = {
+                    confirmDeleteMessage: '{$i18nConfirmDeleteMessage}',
+                    pleaseEnterFolderName: '{$i18nPleaseEnterFolderName}'
+                };
+
                 // Modal para crear carpeta
                 const newFolderBtn = document.getElementById('newFolderBtn');
                 const folderModal = document.getElementById('folderModal');
@@ -969,7 +1010,7 @@ class Application
                     createFolderBtn.addEventListener('click', () => {
                         const folderName = folderNameInput.value.trim();
                         if (!folderName) {
-                            alert('Por favor ingresa un nombre para la carpeta');
+                            alert(i18n.pleaseEnterFolderName);
                             return;
                         }
                         
@@ -1017,7 +1058,7 @@ class Application
                             e.stopPropagation();
                             
                             const itemsList = items.join(', ');
-                            deleteConfirmMessage.textContent = '¿Está seguro de que desea eliminar: ' + itemsList + '? Solo se pueden eliminar archivos y carpetas vacías.';
+                            deleteConfirmMessage.textContent = i18n.confirmDeleteMessage.replace('%s', itemsList);
                             deleteConfirmModal.style.display = 'flex';
                             
                             // Clear previous items from the form
