@@ -8,6 +8,8 @@ class Config
 {
     public function __construct(
         public readonly string $smbDefaultServer = 'localhost',
+        /** @var string[] */
+        public readonly array $smbServerList = [],
         public readonly string $smbRootPath = '',
         public readonly bool $hideDotFiles = true,
         public readonly bool $hideSystemShares = true,
@@ -29,6 +31,7 @@ class Config
     {
         return new self(
             smbDefaultServer: $_ENV['SMB_DEFAULT_SERVER'] ?? 'localhost',
+            smbServerList: self::parseServerList($_ENV['SMB_SERVER_LIST'] ?? ''),
             smbRootPath: $_ENV['SMB_ROOT_PATH'] ?? '',
             hideDotFiles: filter_var($_ENV['SMB_HIDE_DOT_FILES'] ?? true, FILTER_VALIDATE_BOOLEAN),
             hideSystemShares: filter_var($_ENV['SMB_HIDE_SYSTEM_SHARES'] ?? true, FILTER_VALIDATE_BOOLEAN),
@@ -44,5 +47,12 @@ class Config
             logLevel: (int)($_ENV['LOG_LEVEL'] ?? 0),
             logFacility: (int)($_ENV['LOG_FACILITY'] ?? LOG_DAEMON),
         );
+    }
+
+    private static function parseServerList(string $value): array
+    {
+        $servers = array_filter(array_map('trim', explode(',', $value)), fn($v) => $v !== '');
+        // Remove duplicates while preserving order
+        return array_values(array_unique($servers));
     }
 }

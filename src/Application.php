@@ -19,10 +19,17 @@ class Application
     ) {
         $this->session = new Session($config);
         
-        // Resolver idioma antes de usar el traductor instanciado
+        // Resolver idioma: primero sesión, luego GET, luego detección de navegador
         $defaultLanguage = $config->defaultLanguage;
-        $languageDetector = new Translator($defaultLanguage);
-        $language = $_GET['lang'] ?? $languageDetector->detectLanguage($defaultLanguage);
+        $sessionLanguage = $this->session->getLanguage();
+        
+        if ($sessionLanguage) {
+            $language = $sessionLanguage;
+        } else {
+            $languageDetector = new Translator($defaultLanguage);
+            $language = $_GET['lang'] ?? $languageDetector->detectLanguage($defaultLanguage);
+        }
+        
         $this->translator = new Translator($language);
         
         $credentials = $this->session->getCredentials();
@@ -37,9 +44,17 @@ class Application
 
     private function parsePath(): void
     {
-        $this->currentPath = $_GET['path'] ?? $this->config->smbRootPath;
+        $rawPath = $_GET['path'] ?? null;
+        $this->currentPath = $rawPath ?? $this->config->smbRootPath;
         $this->currentPath = trim($this->currentPath, '/');
         $this->pathParts = $this->currentPath ? explode('/', $this->currentPath) : [];
+
+        // Backward compatibility: if only a share was provided via SMB_ROOT_PATH (no server),
+        // attach the default server so navigation still works.
+        if ($rawPath === null && count($this->pathParts) === 1 && $this->currentPath !== '') {
+            $this->pathParts = [$this->config->smbDefaultServer, $this->pathParts[0]];
+            $this->currentPath = implode('/', $this->pathParts);
+        }
         
         $this->sortBy = $_GET['sort'] ?? 'name';
         if (!in_array($this->sortBy, ['name', 'size', 'modified', 'type'])) {
@@ -86,12 +101,28 @@ class Application
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['swcSubmit'])) {
             $username = $_POST['swcUser'] ?? '';
             $password = $_POST['swcPw'] ?? '';
+            $language = $_POST['swcLang'] ?? 'es';
+            
+            // Validate language
+            $validLangs = array_keys($this->getLanguageNames());
+            if (!in_array($language, $validLangs)) {
+                $language = 'es';
+            }
             
             $this->session->setCredentials($username, $password);
+            $this->session->setLanguage($language);
             $this->smbClient->setCredentials($username, $password);
             
-            header('Location: ' . $this->getUrl());
-            exit;
+            // Test credentials by trying to list shares on default server
+            try {
+                $this->smbClient->listShares($this->config->smbDefaultServer);
+                header('Location: ' . $this->getUrl());
+                exit;
+            } catch (\Exception $e) {
+                // Authentication failed - clear credentials and show error
+                $this->session->clearCredentials();
+                $this->session->setErrorMessage('Credenciales incorrectas. Por favor, inténtalo de nuevo.');
+            }
         }
 
         $this->displayLoginForm();
@@ -140,7 +171,11 @@ class Application
         }
 
         $rawFiles = $_FILES['file'];
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+        if ($serverName === '' || $shareName === '') {
+            $this->session->setErrorMessage('Ruta inválida: falta servidor o recurso');
+            return;
+        }
         
         // Normalize to array format
         $fileArray = [];
@@ -176,14 +211,14 @@ class Application
             $fileDir = dirname($fullRemotePath);
             if ($fileDir !== '/' && $fileDir !== $remotePath) {
                 try {
-                    $this->smbClient->createDirectory($shareName, $fileDir);
+                    $this->smbClient->createDirectory($serverName, $shareName, $fileDir);
                 } catch (\Exception $e) {
                     // Directory might already exist, continue
                 }
             }
 
             try {
-                $this->smbClient->uploadFile($shareName, $file['tmp_name'], $fullRemotePath);
+                $this->smbClient->uploadFile($serverName, $shareName, $file['tmp_name'], $fullRemotePath);
                 $successCount++;
             } catch (\Exception $e) {
                 $errorCount++;
@@ -206,11 +241,15 @@ class Application
             return;
         }
 
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+        if ($serverName === '' || $shareName === '') {
+            $this->session->setErrorMessage('Ruta inválida: falta servidor o recurso');
+            return;
+        }
         $remotePath = rtrim($remotePath, '/') . '/' . $dirName;
 
         try {
-            $this->smbClient->createDirectory($shareName, $remotePath);
+            $this->smbClient->createDirectory($serverName, $shareName, $remotePath);
         } catch (\Exception $e) {
             $this->session->setErrorMessage('Error creating directory: ' . $e->getMessage());
         }
@@ -226,7 +265,11 @@ class Application
             return;
         }
 
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+        if ($serverName === '' || $shareName === '') {
+            $this->session->setErrorMessage('Ruta inválida: falta servidor o recurso');
+            return;
+        }
         $successCount = 0;
         $errorCount = 0;
 
@@ -242,12 +285,12 @@ class Application
             
             // Try as file first
             try {
-                $this->smbClient->deleteFile($shareName, $itemPath);
+                $this->smbClient->deleteFile($serverName, $shareName, $itemPath);
                 $deleted = true;
             } catch (\Exception $fileError) {
                 // Try as empty directory
                 try {
-                    $this->smbClient->deleteDirectory($shareName, $itemPath);
+                    $this->smbClient->deleteDirectory($serverName, $shareName, $itemPath);
                     $deleted = true;
                 } catch (\Exception $dirError) {
                     $errorCount++;
@@ -279,7 +322,11 @@ class Application
             }
 
             try {
-                [$shareName, $remotePath] = $this->getShareAndPath();
+                [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+                if ($serverName === '' || $shareName === '') {
+                    echo json_encode(['nonEmptyDirs' => [], 'error' => 'Ruta inválida']);
+                    exit;
+                }
             } catch (\Exception $e) {
                 echo json_encode(['nonEmptyDirs' => [], 'error' => 'Connection error']);
                 exit;
@@ -299,7 +346,7 @@ class Application
                 try {
                     // First, check if it's a directory by trying to rmdir
                     // If rmdir fails, it's either a file or a non-empty directory
-                    $this->smbClient->deleteDirectory($shareName, $itemPath);
+                    $this->smbClient->deleteDirectory($serverName, $shareName, $itemPath);
                     // If we reach here, it was an empty directory and we deleted it (oops!)
                     // But that's ok for this check - we just need to know if it was empty
                 } catch (\Exception $e) {
@@ -333,12 +380,16 @@ class Application
             return;
         }
 
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+        if ($serverName === '' || $shareName === '') {
+            $this->session->setErrorMessage('Ruta inválida: falta servidor o recurso');
+            return;
+        }
         $oldPath = rtrim($remotePath, '/') . '/' . $oldName;
         $newPath = rtrim($remotePath, '/') . '/' . $newName;
 
         try {
-            $this->smbClient->rename($shareName, $oldPath, $newPath);
+            $this->smbClient->rename($serverName, $shareName, $oldPath, $newPath);
         } catch (\Exception $e) {
             $this->session->setErrorMessage('Error renaming: ' . $e->getMessage());
         }
@@ -346,9 +397,9 @@ class Application
 
     private function handleDownload(): void
     {
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
 
-        if ($shareName === '' || $remotePath === '/' || str_ends_with($remotePath, '/')) {
+        if ($serverName === '' || $shareName === '' || $remotePath === '/' || str_ends_with($remotePath, '/')) {
             $this->session->setErrorMessage('Ruta de descarga inválida');
             header('Location: ' . $this->getUrl($this->currentPath));
             exit;
@@ -357,7 +408,7 @@ class Application
         $tempFile = tempnam(sys_get_temp_dir(), 'swc');
 
         try {
-            $this->smbClient->downloadFile($shareName, $remotePath, $tempFile);
+            $this->smbClient->downloadFile($serverName, $shareName, $remotePath, $tempFile);
             $fileName = basename($remotePath);
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename="' . $fileName . '"');
@@ -375,58 +426,100 @@ class Application
         exit;
     }
 
-    private function getShareAndPath(): array
+    private function getServerShareAndPath(): array
     {
-        if (count($this->pathParts) === 0) {
-            return ['', '/'];
+        if (count($this->pathParts) < 2) {
+            return ['', '', '/'];
         }
 
-        $shareName = $this->pathParts[0];
-        $path = '/' . implode('/', array_slice($this->pathParts, 1));
+        $serverName = $this->pathParts[0];
+        $shareName = $this->pathParts[1];
+        $path = '/' . implode('/', array_slice($this->pathParts, 2));
+        if ($path === '//') {
+            $path = '/';
+        }
         
-        return [$shareName, $path];
+        return [$serverName, $shareName, $path];
     }
 
     private function displayContent(): void
     {
         $content = match (count($this->pathParts)) {
-            0 => $this->displayShares(),
+            0 => $this->displayServers(),
+            1 => $this->displayShares($this->pathParts[0]),
             default => $this->displayDirectory(),
         };
 
         echo $this->renderPage('SMB Web Client', $content);
     }
 
-    private function displayShares(): string
+    private function getLanguageNames(): array
     {
-        try {
-            $shares = $this->smbClient->listShares();
-            return $this->renderShareList($shares);
-        } catch (\Exception $e) {
-            return '<p>Error listing shares: ' . htmlspecialchars($e->getMessage()) . '</p>';
-        }
+        return [
+            'es' => 'Español',
+            'en' => 'English',
+            'fr' => 'Français'
+        ];
     }
 
-    private function displayDirectory(): string
+    private function renderLanguageSelectorCombo(): string
     {
-        [$shareName, $remotePath] = $this->getShareAndPath();
+        $langs = $this->getLanguageNames();
+        $current = $this->translator->getLanguage();
+        $currentPath = htmlspecialchars($this->currentPath);
+        $html = '<select name="swcLang" id="swcLang" onchange="window.location.href=\'?path=' . $currentPath . '&lang=\'+this.value" style="width: 100%; padding: 8px; border: 1px solid #c5d1ea; border-radius: 3px; font-size: 0.85rem; box-sizing: border-box; background: #fff;">';
+        foreach ($langs as $code => $label) {
+            $selected = $code === $current ? ' selected' : '';
+            $html .= '<option value="' . $code . '"' . $selected . '>' . htmlspecialchars($label) . '</option>';
+        }
+        $html .= '</select>';
+        return $html;
+    }
+
+    private function displayServers(): string
+    {
+        $servers = $this->smbClient->discoverServers();
+        $logoutUrl = $this->getUrl('', ['logout' => '1']);
+        // Breadcrumb + toolbar en una línea
+        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🚪 ' . $this->translator->translate(17) . '</a>' .
+            '</div>';
         
-        try {
-            $items = $this->smbClient->listDirectory($shareName, $remotePath);
-            $items = $this->sortItems($items);
-            return $this->renderDirectoryList($items);
-        } catch (\Exception $e) {
-            return '<p>Error listing directory: ' . htmlspecialchars($e->getMessage()) . '</p>';
+        $html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+            '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
+            $toolbar .
+            '</div>';
+        
+        $html .= '<table class="listing"><tr><th>' . $this->translator->translate(1) . '</th><th>' . $this->translator->translate(5) . '</th></tr>';
+
+        foreach ($servers as $server) {
+            $safeName = htmlspecialchars($server);
+            $url = $this->getUrl($server);
+            $html .= "<tr><td><a href=\"{$url}\">{$safeName}</a></td><td>Servidor</td></tr>";
         }
+
+        $html .= '</table>';
+        return $html;
     }
 
-    private function renderShareList(array $shares): string
+    private function renderShareList(string $serverName, array $shares): string
     {
-        $html = '<table class="listing"><tr><th>' . $this->translator->translate(1) . '</th><th>' . $this->translator->translate(5) . '</th></tr>';
+        $logoutUrl = $this->getUrl('', ['logout' => '1']);
+        // Breadcrumb + toolbar en una línea
+        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem.">🚪 ' . $this->translator->translate(17) . '</a>' .
+            '</div>';
+        
+        $html = '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+            '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
+            $toolbar .
+            '</div>';
+        
+        $html .= '<table class="listing"><tr><th>' . $this->translator->translate(1) . '</th><th>' . $this->translator->translate(5) . '</th></tr>';
         
         foreach ($shares as $share) {
             $name = htmlspecialchars($share->getName());
-            $url = $this->getUrl($name);
+            $url = $this->getUrl($serverName . '/' . $name);
             $html .= "<tr><td><a href=\"{$url}\">{$name}</a></td><td>Share</td></tr>";
         }
         
@@ -434,20 +527,28 @@ class Application
         return $html;
     }
 
-    private function renderDirectoryList(array $items): string
+    private function displayDirectoryList(array $items): string
     {
         $action = $this->getUrl($this->currentPath);
         $actionEscaped = htmlspecialchars($action);
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
-        $html = '<div class="toolbar">' .
-            '<form id="uploadForm" class="inline" method="post" action="' . $action . '" enctype="multipart/form-data" style="display: none;">' .
+        
+        // Form oculto para upload
+        $html = '<form id="uploadForm" class="inline" method="post" action="' . $action . '" enctype="multipart/form-data" style="display: none;">' .
             '<input type="hidden" name="action" value="upload" />' .
             '<input type="file" name="file" multiple accept="*/*" />' .
-            '</form>' .
-            '<a href="#" id="newFolderBtn" style="color: #666; text-decoration: none; font-size: 0.85rem; align-self: center;">📁 ' . $this->translator->translate(15) . '</a>' .
-            '<a href="#" id="deleteSelectedBtn" style="color: #666; text-decoration: none; font-size: 0.85rem; align-self: center;">🗑️ ' . $this->translator->translate(8) . '</a>' .
-            '<span style="flex: 1;"></span>' .
-            '<a href="' . $logoutUrl . '" style="color: #666; text-decoration: none; font-size: 0.85rem; align-self: center;">🚪 ' . $this->translator->translate(17) . '</a>' .
+            '</form>';
+        
+        // Breadcrumb + toolbar en una línea
+        $toolbar = '<div style="display: flex; align-items: center; gap: 10px;">' .
+            '<a href="#" id="newFolderBtn" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">📁 ' . $this->translator->translate(15) . '</a>' .
+            '<a href="#" id="deleteSelectedBtn" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🗑️ ' . $this->translator->translate(8) . '</a>' .
+            '<a href="' . $logoutUrl . '" class="toolbar-link" style="color: #666; text-decoration: none; font-size: 0.85rem;">🚪 ' . $this->translator->translate(17) . '</a>' .
+            '</div>';
+        
+        $html .= '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">' .
+            '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>' .
+            $toolbar .
             '</div>';
 
         if (count($items) > 0) {
@@ -490,9 +591,6 @@ class Application
 
         // Dropzone al final
         $html .= '<div id="dropzone" class="dropzone"><div class="dropzone-text">📂 Arrastra archivos aquí para subir o haz clic</div></div>';
-
-        // Breadcrumb debajo del dropzone
-        $html .= '<div class="breadcrumb">' . $this->renderBreadcrumb() . '</div>';
         
         // Agregar atributo data con la URL de acción para el JavaScript
         $html .= '<script>window.createFolderAction = "' . $actionEscaped . '";</script>';
@@ -540,8 +638,12 @@ class Application
 
     private function renderBreadcrumb(): string
     {
+        $rootLabel = $this->translator->translate(0);
+        $linkStyle = 'color: inherit; text-decoration: none;';
+        $rootLink = '<a href="' . $this->getUrl('') . '" style="' . $linkStyle . '">' . $rootLabel . '</a>';
+        
         if (empty($this->pathParts)) {
-            return $this->translator->translate(0);
+            return $rootLabel;
         }
 
         $parts = [];
@@ -549,27 +651,41 @@ class Application
         foreach ($this->pathParts as $part) {
             $accum[] = $part;
             $path = implode('/', $accum);
-            $parts[] = '<a href="' . $this->getUrl($path) . '">' . htmlspecialchars($part) . '</a>';
+            $parts[] = '<a href="' . $this->getUrl($path) . '" style="' . $linkStyle . '">' . htmlspecialchars($part) . '</a>';
         }
 
-        return $this->translator->translate(0) . ' > ' . implode(' > ', $parts);
+        return $rootLink . ' > ' . implode(' > ', $parts);
     }
 
     private function displayLoginForm(): void
     {
         $action = $this->getUrl($this->currentPath);
+        $errorMessage = $this->session->getErrorMessage();
+        $errorHtml = '';
+        if ($errorMessage) {
+            $errorMessage = htmlspecialchars($errorMessage);
+            $errorHtml = "<div style=\"background: #ffe0e0; border: 1px solid #ff6b6b; color: #cc0000; padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 0.85rem;\"><strong>Error:</strong> {$errorMessage}</div>";
+        }
+        $langSelector = $this->renderLanguageSelectorCombo();
+        $labelUser = $this->translator->translate(18);
+        $labelPassword = $this->translator->translate(19);
+        $labelLanguage = $this->translator->translate(20);
+        $labelSubmit = $this->translator->translate(21);
         $content = <<<HTML
         <div class="login-overlay">
             <div class="login-window">
                 <div class="login-titlebar">SMB Web Client</div>
                 <div class="login-body">
+                    {$errorHtml}
                     <form method="post" action="{$action}" class="login-form">
-                        <label>Usuario</label>
+                        <label>{$labelUser}</label>
                         <input type="text" name="swcUser" autocomplete="username" />
-                        <label>Contraseña</label>
+                        <label>{$labelPassword}</label>
                         <input type="password" name="swcPw" autocomplete="current-password" />
+                        <label>{$labelLanguage}</label>
+                        {$langSelector}
                         <div class="login-actions">
-                            <input type="submit" name="swcSubmit" value="Conectar" />
+                            <input type="submit" name="swcSubmit" value="{$labelSubmit}" />
                         </div>
                     </form>
                 </div>
@@ -643,6 +759,12 @@ class Application
                 a.sort-link { display: inline-block; width: 100%; }
                 .toolbar a { color: #666; }
                 .toolbar a:hover { color: #666; background-color: transparent; text-decoration: underline; }
+                .toolbar-link { color: #666 !important; text-decoration: none !important; }
+                .toolbar-link:hover { color: #666 !important; background-color: transparent !important; text-decoration: none !important; }
+                .breadcrumb a { color: inherit !important; text-decoration: none !important; }
+                .breadcrumb a:hover { color: inherit !important; background-color: transparent !important; text-decoration: none !important; }
+                .lang-selector a { color: #fff !important; font-weight: normal; text-decoration: underline; }
+                .lang-selector b { color: #ffd700 !important; font-weight: bold; }
             </style>
         </head>
         <body>
@@ -993,5 +1115,27 @@ class Application
         $label = $this->translator->translate($labelIndex);
 
         return "<th><a href=\"{$url}\" class=\"sort-link\">{$label}{$sortIcon}</a></th>";
+    }
+
+    private function displayShares(string $serverName): string
+    {
+        try {
+            $shares = $this->smbClient->listShares($serverName);
+            return $this->renderShareList($serverName, $shares);
+        } catch (\Exception $e) {
+            return '<p>Error listing shares: ' . htmlspecialchars($e->getMessage()) . '</p>';
+        }
+    }
+
+    private function displayDirectory(): string
+    {
+        [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
+        try {
+            $items = $this->smbClient->listDirectory($serverName, $shareName, $remotePath);
+            $items = $this->sortItems($items);
+            return $this->displayDirectoryList($items);
+        } catch (\Exception $e) {
+            return '<p>Error listing directory: ' . htmlspecialchars($e->getMessage()) . '</p>';
+        }
     }
 }

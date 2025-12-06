@@ -10,16 +10,38 @@ services:
       - SERVER_NAME=:80
     restart: unless-stopped
 
-  samba:
+  samba1:
     image: dperson/samba:latest
     restart: unless-stopped
+    hostname: samba1
+    environment:
+      - NETBIOSNAME=samba1
     volumes:
-      - ./smb-share:/share
-      - ./smb.conf:/etc/samba/smb.conf:ro
-    ports:
-      - "139:139"
-      - "445:445"
+      - ./smb-share1:/share
+    expose:
+      - "139"
+      - "445"
     command:
       - -u
       - "user;pass"
+      - -s
+      - "SHARE1;/share;yes;no;yes"
+      - -p
+
+  samba2:
+    image: dperson/samba:latest
+    restart: unless-stopped
+    hostname: samba2
+    environment:
+      - NETBIOSNAME=samba2
+    volumes:
+      - ./smb-share2:/share
+    expose:
+      - "139"
+      - "445"
+    command:
+      - -u
+      - "user;pass"
+      - -s
+      - "SHARE2;/share;yes;no;yes"
       - -p

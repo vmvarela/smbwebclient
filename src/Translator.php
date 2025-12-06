@@ -26,6 +26,10 @@ class Translator
             'Nueva carpeta',
             'Descargar esta carpeta',
             'Desconectar',
+            'Usuario',
+            'Contraseña',
+            'Idioma',
+            'Conectar',
         ],
         'en' => [
             'Windows Network',
@@ -46,6 +50,10 @@ class Translator
             'New folder',
             'Download this folder',
             'Logout',
+            'Username',
+            'Password',
+            'Language',
+            'Connect',
         ],
         'fr' => [
             'Réseau Windows',
@@ -66,6 +74,10 @@ class Translator
             'Nouveau dossier',
             'Télécharger ce dossier',
             'Déconnexion',
+            'Utilisateur',
+            'Mot de passe',
+            'Langue',
+            'Connecter',
         ],
     ];
 
@@ -101,5 +113,10 @@ class Translator
         }
         
         return $default;
+    }
+
+    public function getLanguage(): string
+    {
+        return $this->language;
     }
 }

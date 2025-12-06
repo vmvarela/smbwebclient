@@ -86,6 +86,16 @@ class Session
         return $message;
     }
 
+    public function setLanguage(string $language): void
+    {
+        $_SESSION['swcLanguage'] = $language;
+    }
+
+    public function getLanguage(): ?string
+    {
+        return $_SESSION['swcLanguage'] ?? null;
+    }
+
     public function destroy(): void
     {
         session_destroy();

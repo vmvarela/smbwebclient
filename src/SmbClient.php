@@ -13,8 +13,8 @@ use Icewind\SMB\Exception\InvalidHostException;
 
 class SmbClient
 {
-    private ?IServer $server = null;
-    private ?IShare $share = null;
+    /** @var array<string,IServer> */
+    private array $servers = [];
 
     public function __construct(
         private readonly Config $config,
@@ -27,35 +27,51 @@ class SmbClient
     {
         $this->username = $username;
         $this->password = $password;
-        $this->server = null; // Reset connection
-        $this->share = null;
+        $this->servers = [];
     }
 
-    public function getServer(string $host = null): IServer
+    /**
+     * Return configured servers; if none provided, try NetBIOS broadcast; always falls back to default server.
+     *
+     * @return string[]
+     */
+    public function discoverServers(): array
     {
-        if ($this->server !== null && $host === null) {
-            return $this->server;
+        if (!empty($this->config->smbServerList)) {
+            return $this->config->smbServerList;
         }
 
+        $discovered = $this->discoverViaNmblookup();
+        if (!empty($discovered)) {
+            return $discovered;
+        }
+
+        return [$this->config->smbDefaultServer];
+    }
+
+    public function getServer(?string $host = null): IServer
+    {
         $host = $host ?? $this->config->smbDefaultServer;
+        if (isset($this->servers[$host])) {
+            return $this->servers[$host];
+        }
         $factory = new ServerFactory();
 
         if ($this->username && $this->password) {
             $auth = new BasicAuth($this->username, '', $this->password);
-            $this->server = $factory->createServer($host, $auth);
+            $this->servers[$host] = $factory->createServer($host, $auth);
         } else {
             $auth = new BasicAuth('guest', '', '');
-            $this->server = $factory->createServer($host, $auth);
+            $this->servers[$host] = $factory->createServer($host, $auth);
         }
 
-        return $this->server;
+        return $this->servers[$host];
     }
 
-    public function getShare(string $shareName): IShare
+    public function getShare(string $serverHost, string $shareName): IShare
     {
-        $server = $this->getServer();
-        $this->share = $server->getShare($shareName);
-        return $this->share;
+        $server = $this->getServer($serverHost);
+        return $server->getShare($shareName);
     }
 
     public function listShares(?string $host = null): array
@@ -87,9 +103,31 @@ class SmbClient
         }
     }
 
-    public function listDirectory(string $shareName, string $path = '/'): array
+    /**
+     * Best-effort NetBIOS discovery using nmblookup. Returns unique hostnames if available.
+     *
+     * @return string[]
+     */
+    private function discoverViaNmblookup(): array
     {
-        $share = $this->getShare($shareName);
+        $output = @shell_exec('nmblookup -S 255.255.255.255 2>/dev/null');
+        if (!$output) {
+            return [];
+        }
+
+        preg_match_all('/^([A-Za-z0-9._-]+)<[0-9A-F]{2}>/m', $output, $matches);
+        if (empty($matches[1])) {
+            return [];
+        }
+
+        // Filter out the wildcard name *
+        $names = array_filter($matches[1], fn($name) => $name !== '*');
+        return array_values(array_unique($names));
+    }
+
+    public function listDirectory(string $serverHost, string $shareName, string $path = '/'): array
+    {
+        $share = $this->getShare($serverHost, $shareName);
         $contents = $share->dir($path);
         
         return array_filter(iterator_to_array($contents), function($item) {
@@ -100,9 +138,9 @@ class SmbClient
         });
     }
 
-    public function downloadFile(string $shareName, string $remotePath, string $localPath): void
+    public function downloadFile(string $serverHost, string $shareName, string $remotePath, string $localPath): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $readStream = $share->read($remotePath);
         $writeStream = fopen($localPath, 'wb');
 
@@ -116,28 +154,28 @@ class SmbClient
         fclose($readStream);
     }
 
-    public function uploadFile(string $shareName, string $localPath, string $remotePath): void
+    public function uploadFile(string $serverHost, string $shareName, string $localPath, string $remotePath): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $share->put($localPath, $remotePath);
     }
 
-    public function deleteFile(string $shareName, string $path): void
+    public function deleteFile(string $serverHost, string $shareName, string $path): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $share->del($path);
     }
 
-    public function deleteDirectory(string $shareName, string $path): void
+    public function deleteDirectory(string $serverHost, string $shareName, string $path): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $share->rmdir($path);
     }
 
-    public function isDirectoryEmpty(string $shareName, string $path): bool
+    public function isDirectoryEmpty(string $serverHost, string $shareName, string $path): bool
     {
         try {
-            $share = $this->getShare($shareName);
+            $share = $this->getShare($serverHost, $shareName);
             // Try to list directory contents
             foreach ($share->dir($path) as $item) {
                 // If we find any item that's not . or .., it's not empty
@@ -180,21 +218,21 @@ class SmbClient
         }
     }
 
-    public function createDirectory(string $shareName, string $path): void
+    public function createDirectory(string $serverHost, string $shareName, string $path): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $share->mkdir($path);
     }
 
-    public function rename(string $shareName, string $oldPath, string $newPath): void
+    public function rename(string $serverHost, string $shareName, string $oldPath, string $newPath): void
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         $share->rename($oldPath, $newPath);
     }
 
-    public function getFileInfo(string $shareName, string $path): \Icewind\SMB\IFileInfo
+    public function getFileInfo(string $serverHost, string $shareName, string $path): \Icewind\SMB\IFileInfo
     {
-        $share = $this->getShare($shareName);
+        $share = $this->getShare($serverHost, $shareName);
         return $share->stat($path);
     }
 }
