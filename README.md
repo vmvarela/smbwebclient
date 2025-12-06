@@ -2,6 +2,14 @@
   <img src="public/assets/images/icon.svg" alt="SMB Web Client Logo" width="200">
 </p>
 
+<p align="center">
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml/badge.svg" alt="PHP CI"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml/badge.svg" alt="Docker Build"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/pkgs/container/smbwebclient"><img src="https://ghcr-badge.egpl.dev/vmvarela/smbwebclient/size" alt="Docker Image Size"></a>
+  <img src="https://img.shields.io/badge/php-%3E%3D8.2-8892BF.svg" alt="PHP Version">
+  <a href="https://github.com/vmvarela/smbwebclient/blob/master/LICENSE"><img src="https://img.shields.io/github/license/vmvarela/smbwebclient" alt="License"></a>
+</p>
+
 # SMB Web Client
 
 A modern PHP 8 web-based file browser for SMB/CIFS network shares, powered by FrankenPHP and the icewind/smb library.
@@ -15,7 +23,6 @@ A modern PHP 8 web-based file browser for SMB/CIFS network shares, powered by Fr
 - 🔒 **Session-based authentication** with credential management
 - 🌍 **Multi-language support** (40+ languages with auto-detection)
 - 📁 **File operations**: upload, download, create folders, delete, rename
-- 📦 **Folder download** as ZIP archive
 - 🖱️ **Drag & drop** file uploads
 - 🔄 **Sortable columns** (name, size, date, type)
 - 🐳 **Docker ready** with docker-compose
@@ -27,6 +34,56 @@ A modern PHP 8 web-based file browser for SMB/CIFS network shares, powered by Fr
 - Composer
 
 ## Quick Start with Docker
+
+### Using GitHub Container Registry (Recommended)
+
+```bash
+# Pull the image
+docker pull ghcr.io/vmvarela/smbwebclient:latest
+
+# Run with environment variables
+docker run -d \
+  -p 8080:80 \
+  -e SMB_DEFAULT_SERVER=your-smb-server \
+  ghcr.io/vmvarela/smbwebclient:latest
+
+# Access at http://localhost:8080
+```
+
+### Using Docker Compose
+
+Create a `docker-compose.yml` file:
+
+```yaml
+services:
+  smbwebclient:
+    image: ghcr.io/vmvarela/smbwebclient:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - ./.env:/app/.env:ro
+    environment:
+      - SERVER_NAME=:80
+    restart: unless-stopped
+```
+
+Then run:
+
+```bash
+# Create your .env file
+cat > .env << EOF
+SMB_DEFAULT_SERVER=your-smb-server
+SMB_HIDE_SYSTEM_SHARES=true
+APP_DEFAULT_LANGUAGE=en
+EOF
+
+# Start the container
+docker-compose up -d
+
+# Access at http://localhost:8080
+```
+
+### Building from Source
 
 ```bash
 # Clone the repository
@@ -97,7 +154,6 @@ All configuration is managed through environment variables in the `.env` file:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ARCHIVER_TYPE` | Archive format for folder downloads | `zip` |
 | `LOG_LEVEL` | Logging verbosity (0-3) | `0` |
 | `LOG_FACILITY` | Syslog facility | `LOG_DAEMON` |
 
