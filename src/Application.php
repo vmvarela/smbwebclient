@@ -541,8 +541,10 @@ class Application
         $servers = $this->smbClient->discoverServers();
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         // Breadcrumb + toolbar en una línea
+        $logoutLink = !$this->config->allowAnonymous ? 
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' : '';
         $toolbar = '<div class="toolbar-container">' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
+            $logoutLink .
             '</div>';
 
         $html = '<div class="breadcrumb-toolbar-wrapper">' .
@@ -566,8 +568,10 @@ class Application
     {
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
         // Breadcrumb + toolbar en una línea
+        $logoutLink = !$this->config->allowAnonymous ? 
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' : '';
         $toolbar = '<div class="toolbar-container">' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
+            $logoutLink .
             '</div>';
 
         $html = '<div class="breadcrumb-toolbar-wrapper">' .
@@ -600,10 +604,12 @@ class Application
             '</form>';
         
         // Breadcrumb + toolbar en una línea
+        $logoutLink = !$this->config->allowAnonymous ? 
+            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' : '';
         $toolbar = '<div class="toolbar-container">' .
             '<a href="#" id="newFolderBtn" class="toolbar-link">📁 ' . $this->translator->translate(15) . '</a>' .
             '<a href="#" id="deleteSelectedBtn" class="toolbar-link">🗑️ ' . $this->translator->translate(8) . '</a>' .
-            '<a href="' . $logoutUrl . '" class="toolbar-link">🚪 ' . $this->translator->translate(17) . '</a>' .
+            $logoutLink .
             '</div>';
 
         $html .= '<div class="breadcrumb-toolbar-wrapper">' .
