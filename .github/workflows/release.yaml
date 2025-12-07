@@ -64,4 +64,3 @@ jobs:
             -d "{\"repository\": {\"url\": \"https://github.com/${{ github.repository }}\"}}" \
             https://packagist.org/api/github \
             -H "Authorization: Bearer ${{ secrets.PACKAGIST_TOKEN }}"
-        if: ${{ secrets.PACKAGIST_TOKEN != '' }}
