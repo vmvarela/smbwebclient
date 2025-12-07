@@ -13,7 +13,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ inputs.image }}
-  TRIVY_VERSION: v0.67.2
 
 jobs:
   build:
@@ -92,47 +91,3 @@ jobs:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
         run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
 
-      - name: Trivy scanner - ${{ steps.meta.outputs.tags }}
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          version: '${{ env.TRIVY_VERSION }}'
-          image-ref: '${{ steps.meta.outputs.tags }}'
-          scanners: 'vuln'
-          output: ${{ github.event_name != 'pull_request' && 'trivy-results.sarif' || 'trivy-results.txt' }}
-          format: ${{ github.event_name != 'pull_request' && 'sarif' || 'table' }}
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          skip-dirs: '/home/runner'
-          severity: 'CRITICAL,HIGH'
-  
-      - name: Trivy scanner results summary
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        run: |
-          if [[ -s trivy-results.txt ]]; then
-            {
-              echo "<details><summary><strong>Trivy scanner</strong></summary>"
-              echo ""
-              echo '```'
-              cat trivy-results.txt
-              echo '```'
-              echo "</details>"
-            } >> $GITHUB_STEP_SUMMARY
-          fi
-        shell: bash
-
-      - name: Update Security
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-results.sarif
-
-      - name: Trivy SBOM generation
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: aquasecurity/trivy-action@0.33.1
-        with:
-          version: '${{ env.TRIVY_VERSION }}'
-          scan-type: 'image'
-          image-ref: '${{ steps.meta.outputs.tags }}'
-          format: 'github'
-          github-pat: ${{ secrets.GITHUB_TOKEN }}
-          output: dependency-results.sbom.json
