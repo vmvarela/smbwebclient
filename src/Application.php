@@ -114,6 +114,13 @@ class Application
     private function handleAuthentication(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['swcSubmit'])) {
+            // Validate CSRF token
+            if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
+                $this->session->setErrorMessage('Invalid security token. Please try again.');
+                $this->displayLoginForm();
+                return;
+            }
+
             $username = $_POST['swcUser'] ?? '';
             $password = $_POST['swcPw'] ?? '';
             $language = $_POST['swcLang'] ?? 'es';
@@ -139,6 +146,11 @@ class Application
             // Test credentials by trying to list shares on default server
             try {
                 $this->smbClient->listShares($this->config->smbDefaultServer);
+                
+                // Regenerate session ID to prevent session fixation attacks
+                $this->session->regenerate();
+                $this->session->regenerateCsrfToken();
+                
                 header('Location: ' . $this->getUrl());
                 exit;
             } catch (\Exception $e) {
@@ -176,6 +188,17 @@ class Application
     private function handleAction(): void
     {
         $action = $_POST['action'] ?? '';
+
+        // Validate CSRF token for all state-changing actions (except check_delete which is read-only)
+        if ($action !== 'check_delete') {
+            if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
+                $this->session->setErrorMessage('Invalid security token. Please refresh the page and try again.');
+                header('Location: ' . $this->getUrl($this->currentPath));
+                exit;
+            }
+            // Regenerate CSRF token after successful validation
+            $this->session->regenerateCsrfToken();
+        }
 
         match ($action) {
             'upload' => $this->handleUpload(),
@@ -591,10 +614,12 @@ class Application
         $action = $this->getUrl($this->currentPath);
         $actionEscaped = htmlspecialchars($action);
         $logoutUrl = $this->getUrl('', ['logout' => '1']);
+        $csrfToken = htmlspecialchars($this->session->generateCsrfToken());
         
         // Form oculto para upload
         $html = '<form id="uploadForm" class="inline upload-form-hidden" method="post" action="' . $action . '" enctype="multipart/form-data">' .
             '<input type="hidden" name="action" value="upload" />' .
+            '<input type="hidden" name="csrf_token" value="' . $csrfToken . '" />' .
             '<input type="file" name="file" multiple accept="*/*" />' .
             '</form>';
         
@@ -615,6 +640,7 @@ class Application
         if (count($items) > 0) {
             $html .= '<form method="post" action="' . $action . '">';
             $html .= '<input type="hidden" name="action" value="delete" />';
+            $html .= '<input type="hidden" name="csrf_token" value="' . $csrfToken . '" />';
             $html .= '<table class="listing"><tr><th><input type="checkbox" id="selectAll" /></th><th></th>';
             $html .= $this->renderSortHeader(1, 'name');
             $html .= $this->renderSortHeader(2, 'size');
@@ -656,7 +682,7 @@ class Application
         $html .= '<div id="dropzone" class="dropzone"><div class="dropzone-text">📂 ' . $this->translator->translate(23) . '</div></div>';
         
         // Agregar atributo data con la URL de acción para el JavaScript
-        $html .= '<script>window.createFolderAction = "' . $actionEscaped . '";</script>';
+        $html .= '<script>window.createFolderAction = "' . $actionEscaped . '"; window.csrfToken = "' . $csrfToken . '";</script>';
         
         return $html;
     }
@@ -735,6 +761,7 @@ class Application
         $labelLanguage = $this->translator->translate(20);
         $labelSubmit = $this->translator->translate(21);
         $labelTheme = $this->translator->translate(22);
+        $csrfToken = htmlspecialchars($this->session->generateCsrfToken());
         $content = <<<HTML
         <div class="login-overlay">
             <div class="login-window">
@@ -742,6 +769,7 @@ class Application
                 <div class="login-body">
                     {$errorHtml}
                     <form method="post" action="{$action}" class="login-form">
+                        <input type="hidden" name="csrf_token" value="{$csrfToken}" />
                         <input type="text" name="swcUser" placeholder="{$labelUser}" autocomplete="username" />
                         <div class="password-wrapper">
                             <input type="password" id="swcPw" name="swcPw" placeholder="{$labelPassword}" autocomplete="current-password" />
@@ -858,6 +886,9 @@ class Application
                             const formData = new FormData();
                             formData.append('action', 'upload');
                             formData.append('file', file);
+                            if (window.csrfToken) {
+                                formData.append('csrf_token', window.csrfToken);
+                            }
 
                             console.log('Uploading file', index + 1, 'of', total, 'to:', actionUrl);
 
@@ -933,6 +964,7 @@ class Application
             <!-- Formulario oculto para crear carpeta -->
             <form id="createFolderForm" method="post" class="hidden-form">
                 <input type="hidden" name="action" value="mkdir" />
+                <input type="hidden" name="csrf_token" id="csrfTokenMkdir" />
                 <input type="hidden" name="dirname" id="dirnameInput" />
             </form>
 
@@ -962,6 +994,7 @@ class Application
             <!-- Formulario oculto para borrado -->
             <form id="deleteConfirmForm" method="post" class="hidden-form">
                 <input type="hidden" name="action" value="delete" />
+                <input type="hidden" name="csrf_token" id="csrfTokenDelete" />
             </form>
 
             <script>
@@ -970,6 +1003,14 @@ class Application
                     confirmDeleteMessage: '{$i18nConfirmDeleteMessage}',
                     pleaseEnterFolderName: '{$i18nPleaseEnterFolderName}'
                 };
+
+                // Set CSRF tokens in hidden forms
+                if (window.csrfToken) {
+                    const csrfMkdir = document.getElementById('csrfTokenMkdir');
+                    const csrfDelete = document.getElementById('csrfTokenDelete');
+                    if (csrfMkdir) csrfMkdir.value = window.csrfToken;
+                    if (csrfDelete) csrfDelete.value = window.csrfToken;
+                }
 
                 // Modal para crear carpeta
                 const newFolderBtn = document.getElementById('newFolderBtn');

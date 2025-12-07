@@ -6,6 +6,8 @@ namespace SmbWebClient;
 
 class Session
 {
+    private const ENCRYPTION_KEY_SESSION_VAR = 'swcEncKey';
+
     public function __construct(
         private readonly Config $config,
     ) {
@@ -16,20 +18,80 @@ class Session
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
+        // Ensure we have an encryption key for this session
+        if (!isset($_SESSION[self::ENCRYPTION_KEY_SESSION_VAR])) {
+            $_SESSION[self::ENCRYPTION_KEY_SESSION_VAR] = sodium_crypto_secretbox_keygen();
+        }
+    }
+
+    /**
+     * Encrypt sensitive data using sodium
+     */
+    private function encrypt(string $data): string
+    {
+        $key = $_SESSION[self::ENCRYPTION_KEY_SESSION_VAR];
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $ciphertext = sodium_crypto_secretbox($data, $nonce, $key);
+        return base64_encode($nonce . $ciphertext);
+    }
+
+    /**
+     * Decrypt sensitive data using sodium
+     */
+    private function decrypt(string $encrypted): string
+    {
+        $key = $_SESSION[self::ENCRYPTION_KEY_SESSION_VAR] ?? null;
+        if ($key === null) {
+            return '';
+        }
+
+        $decoded = base64_decode($encrypted, true);
+        if ($decoded === false) {
+            return '';
+        }
+
+        $nonce = substr($decoded, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $ciphertext = substr($decoded, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+
+        $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, $key);
+        if ($plaintext === false) {
+            return '';
+        }
+
+        return $plaintext;
+    }
+
+    /**
+     * Regenerate session ID to prevent session fixation attacks
+     */
+    public function regenerate(): void
+    {
+        // Preserve encryption key across regeneration
+        $encKey = $_SESSION[self::ENCRYPTION_KEY_SESSION_VAR] ?? null;
+        
+        session_regenerate_id(true);
+        
+        if ($encKey !== null) {
+            $_SESSION[self::ENCRYPTION_KEY_SESSION_VAR] = $encKey;
+        }
     }
 
     public function getCredentials(): array
     {
+        $username = $_SESSION['swcUser'] ?? '';
+        $encryptedPassword = $_SESSION['swcPw'] ?? '';
+        
         return [
-            'username' => $_SESSION['swcUser'] ?? '',
-            'password' => $_SESSION['swcPw'] ?? '',
+            'username' => $username,
+            'password' => $encryptedPassword ? $this->decrypt($encryptedPassword) : '',
         ];
     }
 
     public function setCredentials(string $username, string $password): void
     {
         $_SESSION['swcUser'] = $username;
-        $_SESSION['swcPw'] = $password;
+        $_SESSION['swcPw'] = $this->encrypt($password);
     }
 
     public function clearCredentials(): void
@@ -46,16 +108,54 @@ class Session
         return !empty($_SESSION['swcUser']);
     }
 
+    /**
+     * Generate a CSRF token for forms
+     */
+    public function generateCsrfToken(): string
+    {
+        if (!isset($_SESSION['swcCsrfToken'])) {
+            $_SESSION['swcCsrfToken'] = bin2hex(random_bytes(32));
+        }
+        return $_SESSION['swcCsrfToken'];
+    }
+
+    /**
+     * Validate a CSRF token from form submission
+     */
+    public function validateCsrfToken(?string $token): bool
+    {
+        if ($token === null || !isset($_SESSION['swcCsrfToken'])) {
+            return false;
+        }
+        return hash_equals($_SESSION['swcCsrfToken'], $token);
+    }
+
+    /**
+     * Regenerate CSRF token (call after successful validation)
+     */
+    public function regenerateCsrfToken(): void
+    {
+        $_SESSION['swcCsrfToken'] = bin2hex(random_bytes(32));
+    }
+
     public function getCachedAuth(string $type, string $name): ?array
     {
-        return $_SESSION['swcCachedAuth'][$type][$name] ?? null;
+        $cached = $_SESSION['swcCachedAuth'][$type][$name] ?? null;
+        if ($cached === null) {
+            return null;
+        }
+        
+        return [
+            'User' => $cached['User'],
+            'Password' => $this->decrypt($cached['Password']),
+        ];
     }
 
     public function setCachedAuth(string $type, string $name, string $username, string $password): void
     {
         $_SESSION['swcCachedAuth'][$type][$name] = [
             'User' => $username,
-            'Password' => $password,
+            'Password' => $this->encrypt($password),
         ];
     }
 
