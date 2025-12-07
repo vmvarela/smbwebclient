@@ -202,11 +202,6 @@ class Application
             return;
         }
 
-        // Handle both single file and multiple files
-        if (!isset($_FILES['file'])) {
-            return;
-        }
-
         $rawFiles = $_FILES['file'];
         [$serverName, $shareName, $remotePath] = $this->getServerShareAndPath();
         if ($serverName === '' || $shareName === '') {
