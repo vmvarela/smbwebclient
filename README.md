@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yml/badge.svg" alt="PHP CI"></a>
-  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/docker-publish.yml/badge.svg" alt="Docker Build"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yaml/badge.svg" alt="PHP CI"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml/badge.svg" alt="Docker Build"></a>
   <a href="https://github.com/vmvarela/smbwebclient/pkgs/container/smbwebclient"><img src="https://ghcr-badge.egpl.dev/vmvarela/smbwebclient/size" alt="Docker Image Size"></a>
   <img src="https://img.shields.io/badge/php-%3E%3D8.2-8892BF.svg" alt="PHP Version">
   <a href="https://github.com/vmvarela/smbwebclient/blob/master/LICENSE"><img src="https://img.shields.io/github/license/vmvarela/smbwebclient" alt="License"></a>
