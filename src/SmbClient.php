@@ -59,12 +59,12 @@ class SmbClient
 
         if ($this->username && $this->password) {
             $auth = new BasicAuth($this->username, '', $this->password);
-            $this->servers[$host] = $factory->createServer($host, $auth);
         } else {
-            $auth = new BasicAuth('guest', '', '');
-            $this->servers[$host] = $factory->createServer($host, $auth);
+            // For anonymous/guest access, use empty credentials
+            $auth = new BasicAuth('', '', '');
         }
-
+        
+        $this->servers[$host] = $factory->createServer($host, $auth);
         return $this->servers[$host];
     }
 
@@ -100,7 +100,15 @@ class SmbClient
                     }
                 }
                 
-                return true;
+                // Validate that share is actually accessible to filter out
+                // spurious entries sometimes reported by libsmbclient
+                try {
+                    $share->stat('.');
+                    return true;
+                } catch (\Exception) {
+                    // Share is not accessible, filter it out
+                    return false;
+                }
             });
         } catch (AuthenticationException $e) {
             throw new \RuntimeException('Authentication failed: ' . $e->getMessage(), 0, $e);
