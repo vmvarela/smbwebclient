@@ -2,7 +2,7 @@
     "name": "vmvarela/smbwebclient",
     "description": "Modern PHP 8 SMB/CIFS web client using icewind/smb library",
     "type": "project",
-    "license": "GPL-2.0-or-later",
+    "license": "MIT",
     "authors": [
         {
             "name": "Victor M. Varela",

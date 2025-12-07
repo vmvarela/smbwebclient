@@ -51,3 +51,18 @@ jobs:
       image: 'smbwebclient'
       tag: ${{ needs.release.outputs.new_release_version }}
     secrets: inherit
+
+  packagist:
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    needs: release
+    name: Publish to Packagist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Packagist Update
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"repository\": {\"url\": \"https://github.com/${{ github.repository }}\"}}" \
+            https://packagist.org/api/github \
+            -H "Authorization: Bearer ${{ secrets.PACKAGIST_TOKEN }}"
+        if: ${{ secrets.PACKAGIST_TOKEN != '' }}
