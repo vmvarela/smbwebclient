@@ -118,6 +118,121 @@ Or use PHP's built-in server for development:
 php -S localhost:8080 -t public
 ```
 
+## Using as a Composer Package
+
+You can integrate SMB Web Client into your own PHP application:
+
+### Installation
+
+```bash
+composer require vmvarela/smbwebclient
+```
+
+### Basic Usage
+
+```php
+<?php
+
+require 'vendor/autoload.php';
+
+use SmbWebClient\Config;
+use SmbWebClient\SmbClient;
+
+// Create configuration
+$config = new Config(
+    smbDefaultServer: 'your-smb-server',
+    hideSystemShares: true,
+    hideDotFiles: true,
+);
+
+// Create client with credentials
+$client = new SmbClient($config, 'username', 'password');
+
+// List available shares
+$shares = $client->listShares('your-smb-server');
+foreach ($shares as $share) {
+    echo $share->getName() . "\n";
+}
+
+// List directory contents
+$files = $client->listDirectory('your-smb-server', 'ShareName', '/path/to/folder');
+foreach ($files as $file) {
+    echo sprintf("%s - %s (%d bytes)\n", 
+        $file->isDirectory() ? 'DIR' : 'FILE',
+        $file->getName(),
+        $file->getSize()
+    );
+}
+
+// Download a file
+$localPath = $client->downloadFile('your-smb-server', 'ShareName', '/remote/file.txt');
+echo file_get_contents($localPath);
+
+// Upload a file
+$client->uploadFile('your-smb-server', 'ShareName', '/remote/path', '/local/file.txt');
+
+// Create a directory
+$client->createDirectory('your-smb-server', 'ShareName', '/new/folder');
+
+// Delete a file or directory
+$client->delete('your-smb-server', 'ShareName', '/path/to/delete');
+
+// Rename/move a file
+$client->rename('your-smb-server', 'ShareName', '/old/name.txt', '/new/name.txt');
+```
+
+### Anonymous Access
+
+```php
+// For anonymous/guest access, omit credentials
+$client = new SmbClient($config);
+
+// Or explicitly pass null
+$client = new SmbClient($config, null, null);
+```
+
+### Using Environment Variables
+
+```php
+<?php
+
+require 'vendor/autoload.php';
+
+use Dotenv\Dotenv;
+use SmbWebClient\Config;
+use SmbWebClient\SmbClient;
+
+// Load .env file
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
+// Create config from environment
+$config = Config::fromEnv();
+
+// Use the client
+$client = new SmbClient($config, $_ENV['SMB_USER'] ?? null, $_ENV['SMB_PASS'] ?? null);
+```
+
+### Requirements
+
+When using as a library, ensure you have:
+
+- PHP 8.2+
+- `libsmbclient` system library
+- PHP `smbclient` extension (`pecl install smbclient`)
+
+On Debian/Ubuntu:
+```bash
+apt-get install libsmbclient-dev smbclient
+pecl install smbclient
+```
+
+On macOS:
+```bash
+brew install samba
+pecl install smbclient
+```
+
 ## Configuration
 
 All configuration is managed through environment variables in the `.env` file:
