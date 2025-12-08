@@ -46,12 +46,13 @@ class Application
         $this->translator = new Translator($language);
         
         // Resolve theme: first session, then GET, then default
+        $validThemes = ['windows', 'mac', 'ubuntu'];
         $sessionTheme = $this->session->getTheme();
         if ($sessionTheme) {
             $this->theme = $sessionTheme;
         } else {
             $rawTheme = $_GET['theme'] ?? 'windows';
-            $this->theme = $this->validator->validateTheme($rawTheme, array_keys($this->getThemeNames()), 'windows');
+            $this->theme = $this->validator->validateTheme($rawTheme, $validThemes, 'windows');
         }
         
         $credentials = $this->session->getCredentials();
