@@ -1,17 +1,45 @@
-name: Docker CI
+name: PHP CI
 
 on:
   schedule:
     - cron: '30 4 * * *'
   pull_request:
-    paths:
-    - Dockerfile
-    - packages.txt
+    branches: [ "master" ]
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    name: Test Docker Image
-    uses: ./.github/workflows/docker-build-publish.yaml
-    with:
-      image: 'smbwebclient'
-    secrets: inherit
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        tools: composer:v2
+        extensions: sodium, smbclient
+
+    - name: Validate composer.json and composer.lock
+      run: composer validate --strict
+
+    - name: Cache Composer packages
+      id: composer-cache
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install dependencies
+      run: composer install --prefer-dist --no-progress
+
+    - name: Run PHPStan
+      run: vendor/bin/phpstan analyse src --level=5 --no-progress --memory-limit=512M
+
+    - name: Run PHPUnit tests
+      run: vendor/bin/phpunit --testsuite Unit

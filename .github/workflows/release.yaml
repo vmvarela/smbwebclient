@@ -41,7 +41,7 @@ jobs:
             conventional-changelog-conventionalcommits@^9.1.0
             semantic-release-github-actions-tags@^2.0.2
 
-  publish:
+  ghcr:
     if: ${{ needs.release.outputs.new_release_published == 'true' }}
     needs: release
     name: GHCR

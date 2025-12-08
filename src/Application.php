@@ -9,6 +9,7 @@ class Application
     private SmbClient $smbClient;
     private Session $session;
     private Translator $translator;
+    private InputValidator $validator;
     private string $currentPath = '';
     private array $pathParts = [];
     private string $sortBy = 'name';
@@ -19,6 +20,7 @@ class Application
         private readonly Config $config,
     ) {
         $this->session = new Session($config);
+        $this->validator = new InputValidator();
         
         // Resolver idioma: primero sesión, luego GET, luego detección de navegador
         $defaultLanguage = $config->defaultLanguage;
@@ -38,13 +40,8 @@ class Application
         if ($sessionTheme) {
             $this->theme = $sessionTheme;
         } else {
-            $this->theme = $_GET['theme'] ?? 'windows';
-        }
-        
-        // Validar tema
-        $validThemes = array_keys($this->getThemeNames());
-        if (!in_array($this->theme, $validThemes)) {
-            $this->theme = 'windows';
+            $rawTheme = $_GET['theme'] ?? 'windows';
+            $this->theme = $this->validator->validateTheme($rawTheme, array_keys($this->getThemeNames()), 'windows');
         }
         
         $credentials = $this->session->getCredentials();
@@ -60,6 +57,15 @@ class Application
     private function parsePath(): void
     {
         $rawPath = $_GET['path'] ?? null;
+        
+        // Validate path to prevent traversal attacks
+        if ($rawPath !== null) {
+            if (!$this->validator->isPathSafe($rawPath)) {
+                $this->session->setErrorMessage('Invalid path');
+                $rawPath = null;
+            }
+        }
+        
         $this->currentPath = $rawPath ?? $this->config->smbRootPath;
         $this->currentPath = trim($this->currentPath, '/');
         $this->pathParts = $this->currentPath ? explode('/', $this->currentPath) : [];
@@ -71,15 +77,8 @@ class Application
             $this->currentPath = implode('/', $this->pathParts);
         }
         
-        $this->sortBy = $_GET['sort'] ?? 'name';
-        if (!in_array($this->sortBy, ['name', 'size', 'modified', 'type'])) {
-            $this->sortBy = 'name';
-        }
-        
-        $this->sortDir = $_GET['dir'] ?? 'asc';
-        if (!in_array($this->sortDir, ['asc', 'desc'])) {
-            $this->sortDir = 'asc';
-        }
+        $this->sortBy = $this->validator->validateSortField($_GET['sort'] ?? 'name');
+        $this->sortDir = $this->validator->validateSortDirection($_GET['dir'] ?? 'asc');
     }
 
     public function run(): void
@@ -121,22 +120,19 @@ class Application
                 return;
             }
 
-            $username = $_POST['swcUser'] ?? '';
-            $password = $_POST['swcPw'] ?? '';
-            $language = $_POST['swcLang'] ?? 'es';
-            $theme = $_POST['swcTheme'] ?? 'default';
-            
-            // Validate language
-            $validLangs = array_keys($this->getLanguageNames());
-            if (!in_array($language, $validLangs)) {
-                $language = 'es';
-            }
-            
-            // Validate theme
-            $validThemes = array_keys($this->getThemeNames());
-            if (!in_array($theme, $validThemes)) {
-                $theme = 'default';
-            }
+            // Sanitize and validate inputs
+            $username = $this->validator->sanitizeUsername($_POST['swcUser'] ?? '');
+            $password = $_POST['swcPw'] ?? ''; // Password is not sanitized, only stored encrypted
+            $language = $this->validator->validateLanguage(
+                $_POST['swcLang'] ?? 'es',
+                array_keys($this->getLanguageNames()),
+                'es'
+            );
+            $theme = $this->validator->validateTheme(
+                $_POST['swcTheme'] ?? 'windows',
+                array_keys($this->getThemeNames()),
+                'windows'
+            );
             
             $this->session->setCredentials($username, $password);
             $this->session->setLanguage($language);
@@ -259,8 +255,18 @@ class Application
                 continue;
             }
 
+            // Validate and sanitize filename
+            $rawFilename = basename($file['name']);
+            try {
+                $sanitizedFilename = $this->validator->sanitizeFilename($rawFilename);
+            } catch (\InvalidArgumentException $e) {
+                $errorCount++;
+                $errors[] = 'Invalid filename: ' . $this->validator->escapeHtml($rawFilename);
+                continue;
+            }
+
             // Build the full remote path
-            $fullRemotePath = rtrim($remotePath, '/') . '/' . basename($file['name']);
+            $fullRemotePath = rtrim($remotePath, '/') . '/' . $sanitizedFilename;
             
             // Extract directory path and create it if needed
             $fileDir = dirname($fullRemotePath);
@@ -277,7 +283,7 @@ class Application
                 $successCount++;
             } catch (\Exception $e) {
                 $errorCount++;
-                $errors[] = htmlspecialchars(basename($file['name'])) . ': ' . $e->getMessage();
+                $errors[] = $this->validator->escapeHtml($sanitizedFilename) . ': ' . $e->getMessage();
             }
         }
 
@@ -291,8 +297,16 @@ class Application
 
     private function handleCreateDirectory(): void
     {
-        $dirName = $_POST['dirname'] ?? '';
-        if (empty($dirName)) {
+        $rawDirName = $_POST['dirname'] ?? '';
+        if (empty($rawDirName)) {
+            return;
+        }
+
+        // Validate directory name
+        try {
+            $dirName = $this->validator->sanitizeFilename($rawDirName);
+        } catch (\InvalidArgumentException $e) {
+            $this->session->setErrorMessage('Invalid directory name: ' . $e->getMessage());
             return;
         }
 
@@ -312,11 +326,19 @@ class Application
 
     private function handleDelete(): void
     {
-        $items = isset($_POST['items']) ? (array)$_POST['items'] : [];
-        $items = array_filter(array_map('trim', $items));
+        $rawItems = isset($_POST['items']) ? (array)$_POST['items'] : [];
+        $rawItems = array_filter(array_map('trim', $rawItems));
         
-        if (empty($items)) {
+        if (empty($rawItems)) {
             $this->session->setErrorMessage('No items selected for deletion');
+            return;
+        }
+
+        // Validate all filenames
+        try {
+            $items = $this->validator->sanitizeFilenameList($rawItems);
+        } catch (\InvalidArgumentException $e) {
+            $this->session->setErrorMessage('Invalid filename: ' . $e->getMessage());
             return;
         }
 
@@ -336,7 +358,9 @@ class Application
                 $itemPath = rtrim($remotePath, '/') . '/' . $item;
             }
             
-            error_log("Attempting to delete: server=$serverName, share=$shareName, path=$itemPath");
+            if ($this->config->logLevel > 0) {
+                error_log("Attempting to delete: server=$serverName, share=$shareName, path=$itemPath");
+            }
             
             $deleted = false;
             
@@ -351,7 +375,7 @@ class Application
                     $deleted = true;
                 } catch (\Exception $dirError) {
                     $errorCount++;
-                    $this->session->setErrorMessage('Error deleting ' . htmlspecialchars($item) . ': ' . $dirError->getMessage());
+                    $this->session->setErrorMessage('Error deleting ' . $this->validator->escapeHtml($item) . ': ' . $dirError->getMessage());
                 }
             }
             
@@ -370,11 +394,23 @@ class Application
         header('Content-Type: application/json');
         
         try {
-            $items = isset($_POST['items']) ? json_decode($_POST['items'], true) : [];
-            $items = array_filter(array_map('trim', $items));
+            $rawItems = isset($_POST['items']) ? json_decode($_POST['items'], true) : [];
+            if (!is_array($rawItems)) {
+                echo json_encode(['nonEmptyDirs' => [], 'error' => 'Invalid items format']);
+                exit;
+            }
+            $rawItems = array_filter(array_map('trim', $rawItems));
             
-            if (empty($items)) {
+            if (empty($rawItems)) {
                 echo json_encode(['nonEmptyDirs' => [], 'error' => null]);
+                exit;
+            }
+
+            // Validate all filenames
+            try {
+                $items = $this->validator->sanitizeFilenameList($rawItems);
+            } catch (\InvalidArgumentException $e) {
+                echo json_encode(['nonEmptyDirs' => [], 'error' => 'Invalid filename']);
                 exit;
             }
 
@@ -413,7 +449,7 @@ class Application
                         stripos($message, 'notempty') !== false ||
                         stripos($message, 'NT_STATUS_DIRECTORY_NOT_EMPTY') !== false) {
                         // It's a non-empty directory
-                        $nonEmptyDirs[] = htmlspecialchars($item);
+                        $nonEmptyDirs[] = $this->validator->escapeHtml($item);
                     }
                     // If it's a file (error would be different), we don't add it to nonEmptyDirs
                 }
@@ -430,10 +466,19 @@ class Application
 
     private function handleRename(): void
     {
-        $oldName = $_POST['oldname'] ?? '';
-        $newName = $_POST['newname'] ?? '';
+        $rawOldName = $_POST['oldname'] ?? '';
+        $rawNewName = $_POST['newname'] ?? '';
         
-        if (empty($oldName) || empty($newName)) {
+        if (empty($rawOldName) || empty($rawNewName)) {
+            return;
+        }
+
+        // Validate filenames
+        try {
+            $oldName = $this->validator->sanitizeFilename($rawOldName);
+            $newName = $this->validator->sanitizeFilename($rawNewName);
+        } catch (\InvalidArgumentException $e) {
+            $this->session->setErrorMessage('Invalid filename: ' . $e->getMessage());
             return;
         }
 
