@@ -10,3 +10,5 @@ composer.lock
 *.html
 REFACTORING.md
 /.act/
+/.phpunit.cache/
+/coverage/

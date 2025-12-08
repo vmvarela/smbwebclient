@@ -20,6 +20,7 @@ jobs:
       with:
         php-version: '8.3'
         tools: composer:v2
+        extensions: sodium, smbclient
 
     - name: Validate composer.json and composer.lock
       run: composer validate --strict
@@ -38,3 +39,6 @@ jobs:
 
     - name: Run PHPStan
       run: vendor/bin/phpstan analyse src --level=5 --no-progress
+
+    - name: Run PHPUnit tests
+      run: vendor/bin/phpunit --testsuite Unit

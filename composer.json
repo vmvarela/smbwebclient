@@ -15,12 +15,23 @@
         "vlucas/phpdotenv": "^5.6"
     },
     "require-dev": {
-        "phpstan/phpstan": "^2.1"
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11"
     },
     "autoload": {
         "psr-4": {
             "SmbWebClient\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SmbWebClient\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:coverage": "phpunit --coverage-html coverage",
+        "analyse": "phpstan analyse"
     },
     "config": {
         "optimize-autoloader": true,
