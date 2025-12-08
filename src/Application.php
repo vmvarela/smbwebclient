@@ -10,6 +10,7 @@ class Application
     private Session $session;
     private Translator $translator;
     private InputValidator $validator;
+    private RateLimiter $rateLimiter;
     private string $currentPath = '';
     private array $pathParts = [];
     private string $sortBy = 'name';
@@ -21,6 +22,10 @@ class Application
     ) {
         $this->session = new Session($config);
         $this->validator = new InputValidator();
+        
+        // Initialize rate limiter for login protection
+        $cacheDir = $config->cachePath ?: sys_get_temp_dir() . '/smbwebclient';
+        $this->rateLimiter = new RateLimiter($cacheDir);
         
         // Resolver idioma: primero sesión, luego GET, luego detección de navegador
         $defaultLanguage = $config->defaultLanguage;
@@ -113,6 +118,18 @@ class Application
     private function handleAuthentication(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['swcSubmit'])) {
+            // Rate limiting check
+            $clientIp = RateLimiter::getClientIp();
+            if ($this->rateLimiter->isLimited($clientIp)) {
+                $remainingTime = $this->rateLimiter->getSecondsUntilUnlock($clientIp);
+                $minutes = ceil($remainingTime / 60);
+                $this->session->setErrorMessage(
+                    "Demasiados intentos fallidos. Por favor, espera {$minutes} minuto(s) antes de intentarlo de nuevo."
+                );
+                $this->displayLoginForm();
+                return;
+            }
+
             // Validate CSRF token
             if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
                 $this->session->setErrorMessage('Invalid security token. Please try again.');
@@ -143,6 +160,9 @@ class Application
             try {
                 $this->smbClient->listShares($this->config->smbDefaultServer);
                 
+                // Authentication successful - reset rate limiter
+                $this->rateLimiter->recordSuccess($clientIp);
+                
                 // Regenerate session ID to prevent session fixation attacks
                 $this->session->regenerate();
                 $this->session->regenerateCsrfToken();
@@ -150,9 +170,21 @@ class Application
                 header('Location: ' . $this->getUrl());
                 exit;
             } catch (\Exception $e) {
-                // Authentication failed - clear credentials and show error
+                // Authentication failed - record attempt and show error
+                $this->rateLimiter->recordFailedAttempt($clientIp);
+                $remaining = $this->rateLimiter->getRemainingAttempts($clientIp);
+                
                 $this->session->clearCredentials();
-                $this->session->setErrorMessage('Credenciales incorrectas. Por favor, inténtalo de nuevo.');
+                
+                if ($remaining > 0) {
+                    $this->session->setErrorMessage(
+                        "Credenciales incorrectas. Te quedan {$remaining} intento(s)."
+                    );
+                } else {
+                    $this->session->setErrorMessage(
+                        'Credenciales incorrectas. Has alcanzado el límite de intentos.'
+                    );
+                }
             }
         }
 
