@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/php.yaml/badge.svg" alt="PHP CI"></a>
-  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml/badge.svg" alt="Docker Build"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/test.yaml/badge.svg" alt="PHP CI"></a>
+  <a href="https://github.com/vmvarela/smbwebclient/actions/workflows/build.yaml"><img src="https://github.com/vmvarela/smbwebclient/actions/workflows/build.yaml/badge.svg" alt="Docker Build"></a>
   <img src="https://img.shields.io/badge/php-%3E%3D8.2-8892BF.svg" alt="PHP Version">
   <a href="https://github.com/vmvarela/smbwebclient/blob/master/LICENSE"><img src="https://img.shields.io/github/license/vmvarela/smbwebclient" alt="License"></a>
 </p>
