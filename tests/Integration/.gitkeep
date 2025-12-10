@@ -1,0 +1,6 @@
+<?php
+
+declare(strict_types=1);
+
+// Placeholder for integration tests
+// Integration tests require a running SMB server and are not run in CI

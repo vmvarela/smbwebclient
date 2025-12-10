@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    outputs:
+      new_release_published: ${{ steps.release.outputs.new_release_published }}
+      new_release_version: ${{ steps.release.outputs.new_release_version }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # necesario para semantic-release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+
+      - name: Semantic Release
+        id: release
+        uses: cycjimmy/semantic-release-action@v6.0.0
+        with:
+          extra_plugins: |
+            @semantic-release/commit-analyzer@^13.0.1
+            @semantic-release/exec@^7.1.0
+            @semantic-release/git@^10.0.1
+            @semantic-release/github@^12.0.2
+            @semantic-release/release-notes-generator@^14.1.0
+            conventional-changelog-conventionalcommits@^9.1.0
+            semantic-release-github-actions-tags@^2.0.2
+
+  ghcr:
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    needs: release
+    name: GHCR
+    uses: ./.github/workflows/docker-build-publish.yaml
+    with:
+      image: 'smbwebclient'
+      tag: ${{ needs.release.outputs.new_release_version }}
+      # latest: ${{ github.ref == 'refs/heads/master' }}
+      latest: true
+    secrets: inherit
+
+  packagist:
+    if: ${{ needs.release.outputs.new_release_published == 'true' }}
+    needs: release
+    name: Publish to Packagist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Packagist Update
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"repository\": {\"url\": \"https://github.com/${{ github.repository }}\"}}" \
+            https://packagist.org/api/github \
+            -H "Authorization: Bearer ${{ secrets.PACKAGIST_TOKEN }}"

@@ -1,0 +1,59 @@
+services:
+  smbwebclient:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./.env:/app/.env
+      - ./cache:/app/cache
+    environment:
+      - SERVER_NAME=:80
+    restart: unless-stopped
+
+  # smbwebclient-legacy:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.legacy
+  #   ports:
+  #     - "8081:80"
+  #   volumes:
+  #     - ./smbwebclient.php:/var/www/html/smbwebclient.php
+  #     - ./public/smbwebclient_old.php:/var/www/html/smbwebclient_old.php
+  #   environment:
+  #     - APACHE_RUN_USER=www-data
+  #     - APACHE_RUN_GROUP=www-data
+  #   restart: unless-stopped
+
+  samba1:
+    image: dperson/samba:latest
+    restart: unless-stopped
+    hostname: samba1
+    environment:
+      - NETBIOSNAME=samba1
+    volumes:
+      - ./smb-share1:/share
+      - ./smb1.conf:/etc/samba/smb.conf
+    expose:
+      - "139"
+      - "445"
+    command:
+      - -u
+      - "user;pass"
+      - -p
+
+  samba2:
+    image: dperson/samba:latest
+    restart: unless-stopped
+    hostname: samba2
+    environment:
+      - NETBIOSNAME=samba2
+    volumes:
+      - ./smb-share2:/share
+      - ./smb2.conf:/etc/samba/smb.conf
+    expose:
+      - "139"
+      - "445"
+    command:
+      - -u
+      - "user;pass"
+      - -p

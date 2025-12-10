@@ -1,0 +1,599 @@
+/* Ubuntu Theme - Estilo Yaru (Ubuntu GNOME) */
+
+/* --- Variables y Configuración Global Yaru --- */
+:root {
+    --font-stack: 'Ubuntu', sans-serif;
+    --ubuntu-orange: #E95420;
+    --ubuntu-warm-grey: #AEA79F;
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --input-border: #cdc7c2;
+    --input-bg: #fdfdfd;
+    --header-bg: #F6F6F6;
+    --bg-main: #FFFFFF;
+    --border-color: #DCDCDC;
+    --text-primary: #2E3436;
+    --text-secondary: #808080;
+    --hover-bg: #F1F1F1;
+    --selection-bg: #FDDEC8;
+    --selection-text: #C7491C;
+}
+
+body {
+    font-family: var(--font-stack);
+    font-size: 100%;
+    margin: 0;
+    padding: 0;
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.container {
+    padding: 0;
+    font-size: 1rem;
+    background: var(--bg-main);
+    min-height: 100vh;
+}
+
+/* --- Login overlay style - Ubuntu --- */
+.login-overlay {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #772953 0%, #E95420 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(30px);
+    z-index: 0;
+}
+
+.login-window {
+    width: 380px;
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    position: relative;
+    z-index: 1;
+}
+
+.login-titlebar {
+    background: transparent;
+    color: var(--text-color);
+    padding: 0;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.4rem;
+    font-weight: 400;
+}
+
+.login-titlebar::before {
+    content: '';
+    display: block;
+    width: 96px;
+    height: 96px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background-color: #ddd;
+    background-image: url('https://cdn-icons-png.flaticon.com/512/149/149071.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border: 3px solid var(--card-bg);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.login-body {
+    padding: 0;
+    color: var(--text-color);
+}
+
+.login-instruction {
+    margin: 0 0 30px 0;
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--text-color);
+    text-align: center;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.login-form-row {
+    display: flex;
+    gap: 10px;
+    margin-top: -5px;
+    margin-bottom: 10px;
+}
+
+.login-form-row select {
+    flex: 1;
+}
+
+.login-form label {
+    display: none;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"],
+.login-form select {
+    width: 100%;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+    font-family: inherit;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.login-form input[type="text"]::placeholder,
+.login-form input[type="password"]::placeholder {
+    color: #999;
+}
+
+.login-form input[type="text"]:focus,
+.login-form input[type="password"]:focus,
+.login-form select:focus {
+    border-color: var(--ubuntu-orange);
+    box-shadow: 0 0 0 2px rgba(233, 84, 32, 0.2);
+}
+
+.login-form input[type="password"] {
+    padding-right: 40px;
+}
+
+.login-form select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    padding-right: 32px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23AEA79F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    font-size: 0.9rem;
+    padding: 8px 32px 8px 12px;
+}
+
+.login-form select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23E95420' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.login-form select option {
+    background-color: white;
+    color: var(--text-color);
+}
+
+.login-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.login-actions input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--ubuntu-orange);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.login-actions input[type="submit"]:hover {
+    background-color: #d14817;
+}
+
+/* Password toggle eye icon */
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--ubuntu-warm-grey);
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--ubuntu-orange);
+}
+
+.password-toggle svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+}
+
+/* --- File Listing Style - Ubuntu Nautilus --- */
+
+/* Toolbar / Header Bar */
+.toolbar {
+    margin-bottom: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 15px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.toolbar form.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.toolbar button {
+    border: 1px solid var(--ubuntu-orange);
+    background: var(--ubuntu-orange);
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.toolbar button:hover {
+    background: #d14817;
+    border-color: #d14817;
+}
+
+.toolbar input[type="text"],
+.toolbar input[type="file"] {
+    font-size: 0.9rem;
+    background: #fff;
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+    padding: 5px 8px;
+    border-radius: 6px;
+}
+
+.toolbar input[type="text"]:focus,
+.toolbar input[type="file"]:focus {
+    border-color: var(--ubuntu-orange);
+    outline: none;
+}
+
+.toolbar a {
+    color: var(--ubuntu-orange);
+    text-decoration: none;
+}
+
+.toolbar a:hover {
+    color: #d14817;
+    background-color: transparent;
+    text-decoration: underline;
+}
+
+.toolbar-link {
+    color: var(--ubuntu-orange) !important;
+    text-decoration: none !important;
+}
+
+.toolbar-link:hover {
+    color: #d14817 !important;
+    background-color: transparent !important;
+    text-decoration: underline !important;
+}
+
+.toolbar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.breadcrumb-toolbar-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0;
+    padding: 8px 15px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    margin: 0;
+    padding: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    font-weight: 500;
+}
+
+.breadcrumb a {
+    color: var(--text-primary) !important;
+    text-decoration: none !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.breadcrumb a:hover {
+    color: var(--text-primary) !important;
+    background-color: #EAEAEA !important;
+    text-decoration: none !important;
+}
+
+/* Dropzone */
+.dropzone {
+    border: 2px dashed var(--border-color);
+    border-radius: 6px;
+    padding: 20px;
+    background: #fafafa;
+    margin: 12px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.dropzone.drag-over {
+    border-color: var(--ubuntu-orange);
+    background: #fff4f0;
+    box-shadow: 0 0 8px rgba(233, 84, 32, 0.3);
+}
+
+.dropzone-text {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* Table */
+table.listing {
+    border-collapse: collapse;
+    width: 100%;
+    background: var(--bg-main);
+    border: none;
+    font-size: 1rem;
+}
+
+table.listing th,
+table.listing td {
+    padding: 8px 20px;
+    text-align: left;
+    border-bottom: 1px solid #F0F0F0;
+    font-size: inherit;
+}
+
+table.listing td:first-child {
+    padding-right: 8px;
+    width: 30px;
+}
+
+table.listing td:nth-child(2) {
+    padding-left: 0px;
+    padding-right: 12px;
+    width: 32px;
+}
+
+table.listing td:nth-child(3) {
+    padding-left: 0px;
+    font-weight: 500;
+}
+
+table.listing input[type="checkbox"] {
+    margin: 0;
+    vertical-align: middle;
+    width: 16px;
+    height: 16px;
+}
+
+table.listing th {
+    background: var(--bg-main);
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 20px 10px;
+    font-size: 0.9rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+table.listing tr {
+    transition: background-color 0.1s;
+}
+
+table.listing tr:hover {
+    background: var(--hover-bg);
+}
+
+table.listing tr:nth-child(even) {
+    background: transparent;
+}
+
+/* Links */
+a {
+    color: var(--ubuntu-orange);
+    text-decoration: none;
+}
+
+a:hover {
+    color: #d14817;
+    background-color: transparent;
+    text-decoration: underline;
+}
+
+a.sort-link {
+    display: inline-block;
+    width: 100%;
+    color: var(--text-primary);
+}
+
+a.sort-link:hover {
+    background-color: transparent;
+    text-decoration: none;
+}
+
+/* Error and success messages */
+.notification-error {
+    background: #fef2f2;
+    border: 1px solid #ef4444;
+    color: #991b1b;
+    padding: 12px;
+    margin: 12px 20px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.notification-success {
+    background: #f0fdf4;
+    border: 1px solid #22c55e;
+    color: #166534;
+    padding: 12px;
+    margin: 12px 20px;
+    border-radius: 6px;
+}
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 400px;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.modal-content p {
+    margin: 10px 0 5px 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.modal-content input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 1rem;
+    background: var(--input-bg);
+    color: var(--text-color);
+}
+
+.modal-content input[type="text"]:focus {
+    outline: none;
+    border-color: var(--ubuntu-orange);
+    box-shadow: 0 0 0 2px rgba(233, 84, 32, 0.2);
+}
+
+.modal-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-actions button {
+    padding: 8px 16px;
+    border: 1px solid var(--input-border);
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.modal-actions button.btn-cancel {
+    background: #fff;
+    color: var(--text-color);
+    border: 1px solid var(--input-border);
+}
+
+.modal-actions button.btn-cancel:hover {
+    background: var(--hover-bg);
+}
+
+.modal-actions button.btn-primary {
+    border: 1px solid var(--ubuntu-orange);
+    background: var(--ubuntu-orange);
+    color: #fff;
+}
+
+.modal-actions button.btn-primary:hover {
+    background: #d14817;
+    border-color: #d14817;
+}
+
+.modal-actions button.btn-delete {
+    border: 1px solid #ef4444;
+    background: #ef4444;
+    color: #fff;
+}
+
+.modal-actions button.btn-delete:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+.modal-content h3.warning {
+    color: #ef4444;
+}
+
+/* Hidden form */
+.hidden-form {
+    display: none;
+}
+
+/* Upload form hidden by default */
+.upload-form-hidden {
+    display: none;
+}
