@@ -121,29 +121,9 @@ class Application
      */
     private function handleAuthentication(): void
     {
-        if ($this->router->isLoginAttempt()) {
-            // Rate limiting check
-            $clientIp = RateLimiter::getClientIp();
-            if ($this->rateLimiter->isLimited($clientIp)) {
-                $remainingTime = $this->rateLimiter->getSecondsUntilUnlock($clientIp);
-                $minutes = ceil($remainingTime / 60);
-                $this->session->setErrorMessage(
-                    "Demasiados intentos fallidos. Por favor, espera {$minutes} minuto(s) antes de intentarlo de nuevo."
-                );
-                $this->displayLoginForm();
-                return;
-            }
-
-            // Validate CSRF token
-            if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
-                $this->session->setErrorMessage('Invalid security token. Please try again.');
-                $this->displayLoginForm();
-                return;
-            }
-
-            // Sanitize and validate inputs
-            $username = $this->validator->sanitizeUsername($_POST['swcUser'] ?? '');
-            $password = $_POST['swcPw'] ?? '';
+        // Check if this is a POST request to the login page
+        if ($this->router->isPost() && isset($_POST['csrf_token'])) {
+            // Always validate and save language and theme preferences first
             $language = $this->validator->validateLanguage(
                 $_POST['swcLang'] ?? 'es',
                 array_keys($this->getLanguageNames()),
@@ -155,9 +135,51 @@ class Application
                 'windows'
             );
             
-            $this->session->setCredentials($username, $password);
+            // Check if this is just a preference change (not a login attempt)
+            $isPreferenceChange = isset($_POST['preference_change']) && $_POST['preference_change'] === '1';
+            
             $this->session->setLanguage($language);
             $this->session->setTheme($theme);
+            
+            if ($isPreferenceChange) {
+                // Force session write before redirect
+                session_write_close();
+                // Just preference change, redirect to reload with new settings
+                $this->router->redirectToPath($this->router->getCurrentPath());
+                return;
+            }
+            
+            // This is a login attempt
+            $username = $this->validator->sanitizeUsername($_POST['swcUser'] ?? '');
+            $password = $_POST['swcPw'] ?? '';
+            
+            // Rate limiting check for actual login attempts
+            $clientIp = RateLimiter::getClientIp();
+            if ($this->rateLimiter->isLimited($clientIp)) {
+                $remainingTime = $this->rateLimiter->getSecondsUntilUnlock($clientIp);
+                $minutes = ceil($remainingTime / 60);
+                $this->session->setErrorMessage(
+                    "Demasiados intentos fallidos. Por favor, espera {$minutes} minuto(s) antes de intentarlo de nuevo."
+                );
+                $this->displayLoginForm();
+                return;
+            }
+
+            // Validate CSRF token for login attempts
+            if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
+                $this->session->setErrorMessage('Invalid security token. Please try again.');
+                $this->displayLoginForm();
+                return;
+            }
+            
+            // If only username or password is provided (not both), show error
+            if (empty($username) || empty($password)) {
+                $this->session->setErrorMessage('Por favor, ingresa usuario y contraseña.');
+                $this->displayLoginForm();
+                return;
+            }
+            
+            $this->session->setCredentials($username, $password);
             $this->smbClient->setCredentials($username, $password);
             
             // Test credentials by trying to list shares on default server

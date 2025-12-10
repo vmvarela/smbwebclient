@@ -67,12 +67,11 @@ class HtmlRenderer
             <link rel="stylesheet" href="{$cssFile}">
         </head>
         <body>
-        <body>
             <div class="container">
                 {$content}
             </div>
-            {$this->renderPageScripts($i18n)}
             {$this->renderModals($i18n)}
+            {$this->renderPageScripts($i18n)}
         </body>
         </html>
         HTML;
@@ -100,6 +99,16 @@ class HtmlRenderer
         $csrfToken = htmlspecialchars($this->session->generateCsrfToken());
         
         return <<<HTML
+        <script>
+        function handlePreferenceChange() {
+            const preferenceChange = document.getElementById('preferenceChange');
+            const loginForm = document.querySelector('.login-form');
+            if (preferenceChange && loginForm) {
+                preferenceChange.value = '1';
+                loginForm.submit();
+            }
+        }
+        </script>
         <div class="login-overlay">
             <div class="login-window">
                 <div class="login-titlebar">SMB Web Client</div>
@@ -107,6 +116,7 @@ class HtmlRenderer
                     {$errorHtml}
                     <form method="post" action="{$action}" class="login-form">
                         <input type="hidden" name="csrf_token" value="{$csrfToken}" />
+                        <input type="hidden" name="preference_change" id="preferenceChange" value="0" />
                         <input type="text" name="swcUser" placeholder="{$labelUser}" autocomplete="username" />
                         <div class="password-wrapper">
                             <input type="password" id="swcPw" name="swcPw" placeholder="{$labelPassword}" autocomplete="current-password" />
@@ -351,7 +361,7 @@ class HtmlRenderer
         $currentLang = $this->translator->getLanguage();
         $label = $this->translator->translate(20);
         
-        $html = '<select name="swcLang" class="login-select" aria-label="' . $label . '">';
+        $html = '<select name="swcLang" class="login-select" aria-label="' . $label . '" onchange="handlePreferenceChange()">';
         foreach ($languages as $code => $name) {
             $selected = $code === $currentLang ? 'selected' : '';
             $html .= '<option value="' . $code . '" ' . $selected . '>' . htmlspecialchars($name) . '</option>';
@@ -368,7 +378,7 @@ class HtmlRenderer
         $themes = $this->getThemeNames();
         $label = $this->translator->translate(22);
         
-        $html = '<select name="swcTheme" class="login-select" aria-label="' . $label . '">';
+        $html = '<select name="swcTheme" class="login-select" aria-label="' . $label . '" onchange="handlePreferenceChange()">';
         foreach ($themes as $code => $name) {
             $selected = $code === $this->theme ? 'selected' : '';
             $html .= '<option value="' . $code . '" ' . $selected . '>' . htmlspecialchars($name) . '</option>';
@@ -576,152 +586,154 @@ class HtmlRenderer
             </script>
 
             <script>
-                const i18n = {
-                    confirmDeleteMessage: '{$i18n['confirmDeleteMessage']}',
-                    pleaseEnterFolderName: '{$i18n['pleaseEnterFolderName']}'
-                };
+                document.addEventListener('DOMContentLoaded', function() {
+                    const i18n = {
+                        confirmDeleteMessage: '{$i18n['confirmDeleteMessage']}',
+                        pleaseEnterFolderName: '{$i18n['pleaseEnterFolderName']}'
+                    };
 
-                if (window.csrfToken) {
-                    const csrfMkdir = document.getElementById('csrfTokenMkdir');
-                    const csrfDelete = document.getElementById('csrfTokenDelete');
-                    if (csrfMkdir) csrfMkdir.value = window.csrfToken;
-                    if (csrfDelete) csrfDelete.value = window.csrfToken;
-                }
-
-                const newFolderBtn = document.getElementById('newFolderBtn');
-                const folderModal = document.getElementById('folderModal');
-                const folderNameInput = document.getElementById('folderNameInput');
-                const cancelFolderBtn = document.getElementById('cancelFolderBtn');
-                const createFolderBtn = document.getElementById('createFolderBtn');
-                const createFolderForm = document.getElementById('createFolderForm');
-                const dirnameInput = document.getElementById('dirnameInput');
-
-                const selectAllCheckbox = document.getElementById('selectAll');
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.addEventListener('change', function() {
-                        const checkboxes = document.querySelectorAll('input[name="items[]"]');
-                        checkboxes.forEach(checkbox => {
-                            checkbox.checked = this.checked;
-                        });
-                    });
-                }
-
-                if (newFolderBtn) {
-                    if (window.createFolderAction) {
-                        createFolderForm.setAttribute('action', window.createFolderAction);
+                    if (window.csrfToken) {
+                        const csrfMkdir = document.getElementById('csrfTokenMkdir');
+                        const csrfDelete = document.getElementById('csrfTokenDelete');
+                        if (csrfMkdir) csrfMkdir.value = window.csrfToken;
+                        if (csrfDelete) csrfDelete.value = window.csrfToken;
                     }
 
-                    newFolderBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        folderModal.style.display = 'flex';
-                        folderNameInput.focus();
-                    });
+                    const newFolderBtn = document.getElementById('newFolderBtn');
+                    const folderModal = document.getElementById('folderModal');
+                    const folderNameInput = document.getElementById('folderNameInput');
+                    const cancelFolderBtn = document.getElementById('cancelFolderBtn');
+                    const createFolderBtn = document.getElementById('createFolderBtn');
+                    const createFolderForm = document.getElementById('createFolderForm');
+                    const dirnameInput = document.getElementById('dirnameInput');
 
-                    cancelFolderBtn.addEventListener('click', () => {
-                        folderModal.style.display = 'none';
-                        folderNameInput.value = '';
-                    });
+                    const selectAllCheckbox = document.getElementById('selectAll');
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.addEventListener('change', function() {
+                            const checkboxes = document.querySelectorAll('input[name="items[]"]');
+                            checkboxes.forEach(checkbox => {
+                                checkbox.checked = this.checked;
+                            });
+                        });
+                    }
 
-                    createFolderBtn.addEventListener('click', () => {
-                        const folderName = folderNameInput.value.trim();
-                        if (!folderName) {
-                            alert(i18n.pleaseEnterFolderName);
-                            return;
+                    if (newFolderBtn) {
+                        if (window.createFolderAction) {
+                            createFolderForm.setAttribute('action', window.createFolderAction);
                         }
-                        
-                        dirnameInput.value = folderName;
-                        createFolderForm.submit();
-                    });
 
-                    folderNameInput.addEventListener('keypress', (e) => {
-                        if (e.key === 'Enter') {
-                            createFolderBtn.click();
-                        }
-                    });
+                        newFolderBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            folderModal.style.display = 'flex';
+                            folderNameInput.focus();
+                        });
 
-                    folderModal.addEventListener('click', (e) => {
-                        if (e.target === folderModal) {
+                        cancelFolderBtn.addEventListener('click', () => {
                             folderModal.style.display = 'none';
                             folderNameInput.value = '';
-                        }
-                    });
-                }
+                        });
 
-                const deleteConfirmModal = document.getElementById('deleteConfirmModal');
-                const deleteConfirmForm = document.getElementById('deleteConfirmForm');
-                const deleteConfirmMessage = document.getElementById('deleteConfirmMessage');
-                const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
-                const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-                const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
-                const noSelectionModal = document.getElementById('noSelectionModal');
-                const closeNoSelectionBtn = document.getElementById('closeNoSelectionBtn');
-
-                const deleteForm = document.querySelector('form input[name="action"][value="delete"]')?.closest('form');
-                
-                if (deleteSelectedBtn && deleteForm) {
-                    deleteSelectedBtn.addEventListener('click', (e) => {
-                        const items = Array.from(deleteForm.querySelectorAll('input[name="items[]"]:checked'))
-                            .map(input => input.value);
-                        
-                        if (items.length > 0) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            
-                            const itemsList = items.join(', ');
-                            deleteConfirmMessage.textContent = i18n.confirmDeleteMessage.replace('%s', itemsList);
-                            deleteConfirmModal.style.display = 'flex';
-                            
-                            deleteConfirmForm.querySelectorAll('input[name="items[]"]').forEach(el => el.remove());
-                            
-                            items.forEach(item => {
-                                const input = document.createElement('input');
-                                input.type = 'hidden';
-                                input.name = 'items[]';
-                                input.value = item;
-                                deleteConfirmForm.appendChild(input);
-                            });
-                            
-                            deleteConfirmForm.setAttribute('action', deleteForm.getAttribute('action'));
-                        } else {
-                            e.preventDefault();
-                            if (noSelectionModal) {
-                                noSelectionModal.style.display = 'flex';
+                        createFolderBtn.addEventListener('click', () => {
+                            const folderName = folderNameInput.value.trim();
+                            if (!folderName) {
+                                alert(i18n.pleaseEnterFolderName);
+                                return;
                             }
-                        }
-                    });
-                }
+                            
+                            dirnameInput.value = folderName;
+                            createFolderForm.submit();
+                        });
 
-                if (cancelDeleteBtn) {
-                    cancelDeleteBtn.addEventListener('click', () => {
-                        deleteConfirmModal.style.display = 'none';
-                    });
-                }
+                        folderNameInput.addEventListener('keypress', (e) => {
+                            if (e.key === 'Enter') {
+                                createFolderBtn.click();
+                            }
+                        });
 
-                if (confirmDeleteBtn) {
-                    confirmDeleteBtn.addEventListener('click', () => {
-                        deleteConfirmForm.submit();
-                    });
-                }
+                        folderModal.addEventListener('click', (e) => {
+                            if (e.target === folderModal) {
+                                folderModal.style.display = 'none';
+                                folderNameInput.value = '';
+                            }
+                        });
+                    }
 
-                if (closeNoSelectionBtn && noSelectionModal) {
-                    closeNoSelectionBtn.addEventListener('click', () => {
-                        noSelectionModal.style.display = 'none';
-                    });
+                    const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+                    const deleteConfirmForm = document.getElementById('deleteConfirmForm');
+                    const deleteConfirmMessage = document.getElementById('deleteConfirmMessage');
+                    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+                    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+                    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+                    const noSelectionModal = document.getElementById('noSelectionModal');
+                    const closeNoSelectionBtn = document.getElementById('closeNoSelectionBtn');
 
-                    noSelectionModal.addEventListener('click', (e) => {
-                        if (e.target === noSelectionModal) {
-                            noSelectionModal.style.display = 'none';
-                        }
-                    });
-                }
+                    const deleteForm = document.querySelector('form input[name="action"][value="delete"]')?.closest('form');
+                    
+                    if (deleteSelectedBtn && deleteForm) {
+                        deleteSelectedBtn.addEventListener('click', (e) => {
+                            const items = Array.from(deleteForm.querySelectorAll('input[name="items[]"]:checked'))
+                                .map(input => input.value);
+                            
+                            if (items.length > 0) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                const itemsList = items.join(', ');
+                                deleteConfirmMessage.textContent = i18n.confirmDeleteMessage.replace('%s', itemsList);
+                                deleteConfirmModal.style.display = 'flex';
+                                
+                                deleteConfirmForm.querySelectorAll('input[name="items[]"]').forEach(el => el.remove());
+                                
+                                items.forEach(item => {
+                                    const input = document.createElement('input');
+                                    input.type = 'hidden';
+                                    input.name = 'items[]';
+                                    input.value = item;
+                                    deleteConfirmForm.appendChild(input);
+                                });
+                                
+                                deleteConfirmForm.setAttribute('action', deleteForm.getAttribute('action'));
+                            } else {
+                                e.preventDefault();
+                                if (noSelectionModal) {
+                                    noSelectionModal.style.display = 'flex';
+                                }
+                            }
+                        });
+                    }
 
-                if (deleteConfirmModal) {
-                    deleteConfirmModal.addEventListener('click', (e) => {
-                        if (e.target === deleteConfirmModal) {
+                    if (cancelDeleteBtn) {
+                        cancelDeleteBtn.addEventListener('click', () => {
                             deleteConfirmModal.style.display = 'none';
-                        }
-                    });
-                }
+                        });
+                    }
+
+                    if (confirmDeleteBtn) {
+                        confirmDeleteBtn.addEventListener('click', () => {
+                            deleteConfirmForm.submit();
+                        });
+                    }
+
+                    if (closeNoSelectionBtn && noSelectionModal) {
+                        closeNoSelectionBtn.addEventListener('click', () => {
+                            noSelectionModal.style.display = 'none';
+                        });
+
+                        noSelectionModal.addEventListener('click', (e) => {
+                            if (e.target === noSelectionModal) {
+                                noSelectionModal.style.display = 'none';
+                            }
+                        });
+                    }
+
+                    if (deleteConfirmModal) {
+                        deleteConfirmModal.addEventListener('click', (e) => {
+                            if (e.target === deleteConfirmModal) {
+                                deleteConfirmModal.style.display = 'none';
+                            }
+                        });
+                    }
+                });
             </script>
         HTML;
     }
