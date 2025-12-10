@@ -49,6 +49,8 @@ jobs:
     with:
       image: 'smbwebclient'
       tag: ${{ needs.release.outputs.new_release_version }}
+      # latest: ${{ github.ref == 'refs/heads/master' }}
+      latest: true
     secrets: inherit
 
   packagist:

@@ -9,6 +9,10 @@ on:
       tag:
         required: false
         type: string
+      latest:
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
@@ -51,7 +55,13 @@ jobs:
         id: tags
         run: |
           if [[ -n "${{ inputs.tag }}" ]]; then
-            echo "tags=type=raw,value=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            TAGS="type=raw,value=${{ inputs.tag }}"
+            if [[ "${{ inputs.latest }}" == "true" ]]; then
+              TAGS="${TAGS}"$'\n'"type=raw,value=latest"
+            fi
+            echo "tags<<EOF" >> "$GITHUB_OUTPUT"
+            echo "${TAGS}" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
             echo "version=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
           else
             echo "tags=type=sha" >> "$GITHUB_OUTPUT"
