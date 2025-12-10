@@ -146,7 +146,6 @@ class Application
                 session_write_close();
                 // Just preference change, redirect to reload with new settings
                 $this->router->redirectToPath($this->router->getCurrentPath());
-                return;
             }
             
             // This is a login attempt
@@ -166,7 +165,7 @@ class Application
             }
 
             // Validate CSRF token for login attempts
-            if (!$this->session->validateCsrfToken($_POST['csrf_token'] ?? null)) {
+            if (!$this->session->validateCsrfToken($_POST['csrf_token'])) {
                 $this->session->setErrorMessage('Invalid security token. Please try again.');
                 $this->displayLoginForm();
                 return;
