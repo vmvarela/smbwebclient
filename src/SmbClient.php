@@ -159,7 +159,7 @@ class SmbClient
         $writeStream = fopen($localPath, 'wb');
 
         if ($writeStream === false) {
-            throw new \RuntimeException('No se pudo crear el archivo temporal de descarga');
+            throw new \RuntimeException('Failed to create temporary download file');
         }
 
         stream_copy_to_stream($readStream, $writeStream);

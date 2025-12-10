@@ -165,7 +165,8 @@ foreach ($files as $file) {
 }
 
 // Download a file
-$localPath = $client->downloadFile('your-smb-server', 'ShareName', '/remote/file.txt');
+$localPath = '/local/path/to/file.txt';
+$client->downloadFile('your-smb-server', 'ShareName', '/remote/file.txt', $localPath);
 echo file_get_contents($localPath);
 
 // Upload a file
@@ -173,10 +174,10 @@ $client->uploadFile('your-smb-server', 'ShareName', '/remote/path', '/local/file
 
 // Create a directory
 $client->createDirectory('your-smb-server', 'ShareName', '/new/folder');
-
-// Delete a file or directory
-$client->delete('your-smb-server', 'ShareName', '/path/to/delete');
-
+// Delete a file
+$client->deleteFile('your-smb-server', 'ShareName', '/path/to/file.txt');
+// Delete a directory
+$client->deleteDirectory('your-smb-server', 'ShareName', '/path/to/folder');
 // Rename/move a file
 $client->rename('your-smb-server', 'ShareName', '/old/name.txt', '/new/name.txt');
 ```
